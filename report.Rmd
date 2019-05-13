@@ -3,11 +3,23 @@ title: "Analyse d’un jeu de données"
 subtitle: "Projet du 2e semestre - DFGSM3 - UE11 parcours d'informatique biomédicale"
 author: "Guillaume LA & Samy OULMANE"
 date: "2018/2019"
-output: html_document
+output: html_notebook
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+# Libs
+library(readr)
 ```
+
+Importation des données
+
+```{r}
+breast_cancer_wisconsin <- read_csv("data/breast-cancer-wisconsin.data", col_names = FALSE)
+wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
+wpbc <- read_csv("data/wpbc.data", col_names = FALSE)
+```
+
 
 ## Analyse descriptive
