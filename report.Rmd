@@ -1,0 +1,13 @@
+---
+title: "Analyse d’un jeu de données"
+subtitle: "Projet du 2e semestre - DFGSM3 - UE11 parcours d'informatique biomédicale"
+author: "Guillaume LA & Samy OULMANE"
+date: "2018/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Analyse descriptive
