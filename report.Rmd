@@ -16,7 +16,8 @@ library(readr)
 Importation des données
 
 ```{r}
-breast_cancer_wisconsin <- read_csv("data/breast-cancer-wisconsin.data", col_names = FALSE)
+bcw <- read_csv("data/breast-cancer-wisconsin.data", col_names = FALSE)
+colnames(bcw) <- c("ID", "Clump thickness", "Cell size uniformity", "Cell shape uniformity", "Marginal adhesion", "Single epithelial cell size", "Bare Nuclei", "Bland chromatin", "Normal nucleoli", "Mitoses", "Class")
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
 wpbc <- read_csv("data/wpbc.data", col_names = FALSE)
 ```
