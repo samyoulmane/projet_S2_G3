@@ -17,7 +17,10 @@ Importation des données
 
 ```{r}
 bcw <- read_csv("data/breast-cancer-wisconsin.data", col_names = FALSE)
-colnames(bcw) <- c("ID", "Clump thickness", "Cell size uniformity", "Cell shape uniformity", "Marginal adhesion", "Single epithelial cell size", "Bare Nuclei", "Bland chromatin", "Normal nucleoli", "Mitoses", "Class")
+colnames(bcw) <- c("id", "clump_thickness", "cell_size_uniformity", "cell_shape_uniformity", "marginal_adhesion", "single_epithelial_cell_size", "bare_nuclei", "bland_chromatin", "normal_nucleoli", "mitoses", "class")
+bcw$Class[bcw$Class==2] <- "B"
+bcw$Class[bcw$Class==4] <- "M"
+
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
 wpbc <- read_csv("data/wpbc.data", col_names = FALSE)
 ```
