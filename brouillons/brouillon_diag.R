@@ -1,51 +1,14 @@
----
-title: "Analyse d’un jeu de données"
-author: "Guillaume LA & Samy OULMANE"
-date: "2018/2019"
-output:
-  html_notebook: default
-  html_document:
-    toc: true
-    toc_float:
-      collapsed: false
-subtitle: "Projet du 2e semestre - DFGSM3 - UE11 parcours d'informatique biomédicale"
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
 # Libs
-library(readr)
 library(tidyverse)
 library(DT)
 library(desctable)
 library(cowplot)
 
-```
-
-***
-
-Importation des données
-
-```{r, message=FALSE}
-bcw <- read_csv("data/breast-cancer-wisconsin.data", col_names = FALSE)
-
-bcw <- `colnames<-`(bcw, c("id", "clump_thickness", "cell_size_uniformity", "cell_shape_uniformity", "marginal_adhesion", "single_epithelial_cell_size", "bare_nuclei", "bland_chromatin", "normal_nucleoli", "mitoses", "class"))
-
-bcw$class[bcw$class==2] <- "B"
-bcw$class[bcw$class==4] <- "M"
-
+# Importation
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
 
-wpbc <- read_csv("data/wpbc.data", col_names = FALSE)
-```
+features <- c("radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean", "concave_points_mean", "symmetry_mean", "fractal_dimension_mean", "radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave_points_worst", "symmetry_worst", "fractal_dimension_worst")
 
-
-## Analyse descriptive
-
-### Analyse du fichier de diagnostics
-
-```{r diag_nettoyage}
 # Nom des colonnes
 wdbc <- `colnames<-`(wdbc, c("id",
                      "diagnosis",
@@ -80,19 +43,11 @@ wdbc <- `colnames<-`(wdbc, c("id",
                      "symmetry_worst", 
                      "fractal_dimension_worst"))
 
-features <- c("radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean", "concave_points_mean", "symmetry_mean", "fractal_dimension_mean", "radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave_points_worst", "symmetry_worst", "fractal_dimension_worst")
-
 wdbc$diagnosis <- factor(wdbc$diagnosis)
-```
 
-
-```{r diag_desc}
 # Description
 desctable(wdbc) %>% datatable
-```
 
-
-```{r diag_graphs, fig.width=10, fig.align='center'}
 # Graphiques
 draw_g <- function(value = "radius_mean") {
   ggplot(data = wdbc) +
@@ -105,5 +60,3 @@ draw_g <- function(value = "radius_mean") {
 lapply(features, draw_g) -> a
 
 plot_grid(plotlist = a)
-```
-
