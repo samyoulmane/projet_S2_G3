@@ -20,24 +20,17 @@ library(tidyverse)
 library(DT)
 library(desctable)
 library(cowplot)
-
+library(corrplot)
+library(RColorBrewer)
 ```
 
 ***
-
-Importation des données
-
-```{r, message=FALSE}
-
-
-```
-
 
 ## Analyse descriptive
 
 ### Analyse du fichier de diagnostics
 
-```{r diag_nettoyage}
+```{r diag_nettoyage, message=FALSE}
 
 # Importation des données
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
@@ -79,6 +72,7 @@ colnames(wdbc)<- c("id",
 features <- c("radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean", "concave_points_mean", "symmetry_mean", "fractal_dimension_mean", "radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave_points_worst", "symmetry_worst", "fractal_dimension_worst")
 
 wdbc$diagnosis <- factor(wdbc$diagnosis)
+
 ```
 
 
@@ -97,9 +91,16 @@ draw_g <- function(value = "radius_mean") {
     theme_minimal() +
     theme(legend.position = 'none')
 }
-
 lapply(features, draw_g) -> a
-
 plot_grid(plotlist = a)
+
+
+wdbc_mean <- wdbc[,3:12]
+wdbc_worst <- wdbc[,23:32]
+M <-cor(wdbc_mean)
+W <- cor(wdbc_worst)
+corrplot(M, type="upper", method="number", order="hclust",
+         col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
+
 ```
 
