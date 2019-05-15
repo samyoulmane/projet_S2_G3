@@ -53,7 +53,7 @@ draw_g <- function(value = "radius_mean") {
   ggplot(data = wdbc) +
     aes_string(x = value, fill = "diagnosis") +
     geom_density(adjust = 1) +
-    theme_minimal() +
+    theme_void() +
     theme(legend.position = 'none')
 }
 
