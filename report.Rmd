@@ -28,8 +28,12 @@ library(plyr)
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
 
 # Nom des colonnes
-colnames(wdbc) <- c("id", "diagnosis", "radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean",  "concave_points_mean", "symmetry_mean",  "fractal_dimension_mean", "radius_se", "texture_se", "perimeter_se", "area_se", "smoothness_se", "compactness_se", "concavity_se", "concave_points_se", "symmetry_se", "fractal_dimension_se", "radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave_points_worst", "symmetry_worst", "fractal_dimension_worst")
-
+colnames1 <- c("radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity",  "concave_points", "symmetry",  "fractal_dimension")
+colnames_mean <- paste0(colnames1, "_mean")
+colnames_se <- paste0(colnames1, "_se")
+colnames_worst <- paste0(colnames1, "_worst")
+colnames_all <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_worst)
+colnames(wdbc) <- colnames_all
 wdbc$diagnosis <- factor(wdbc$diagnosis)
 
 variables <- c('Radius', 'Texture', 'Perimeter', 'Area', 'Smoothness', 'Compactness', 'Concavity', 'Concave points', 'Symmetry', 'Fractal dimension')
@@ -159,10 +163,24 @@ wdbc_mean <- wdbc2[,2:12]
 wdbc_worst <- wdbc2[,c(2,23:32)]
 M <-cor(wdbc_mean)
 W <- cor(wdbc_worst)
-corrplot(M, type="upper", method="number", order="hclust",
-         col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
-corrplot(W, type="upper", method="number", order="hclust",
-         col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
+corrplot(M, type="upper", method="number", order="hclust", 
+          col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
+corrplot(W, type="upper", method="number", order="hclust", 
+          col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
+
+```
+
+
+
+```{r}
+set.seed(1)
+ntest <- sample(1:569, 114, replace=FALSE)
+test_set <- wdbc2[ntest, -1]
+train_set <- wdbc2[-ntest, -1]
+kmeans_cluster <- kmeans(train_set, 2, nstart=20)
+table(kmeans_cluster$cluster, test_set$diagnosis)
+
+
 
 ```
 
