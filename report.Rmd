@@ -23,7 +23,8 @@ library(cowplot)
 library(corrplot)
 library(RColorBrewer)
 library(plyr)
-
+library(NbClust)
+library(factoextra)
 # Importation des données
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
 
@@ -161,25 +162,41 @@ wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"="2"))
 wdbc2$diagnosis <- wdbc2$diagnosis %>% as.numeric
 wdbc_mean <- wdbc2[,2:12]
 wdbc_worst <- wdbc2[,c(2,23:32)]
+wdbc_se <- wdbc2[, c(2, 13:22)]
 M <-cor(wdbc_mean)
 W <- cor(wdbc_worst)
+SE <- cor(wdbc_se)
 corrplot(M, type="upper", method="number", order="hclust", 
           col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
 corrplot(W, type="upper", method="number", order="hclust", 
           col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
+corrplot(SE, type="upper", method="number", order="hclust", 
+          col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
+
+```
+
+K-means :
+
+```{r}
+set.seed(1)
+ntest <- sample(1:569, 114, replace=FALSE)
+wdbc3 <- wdbc2[, c(-1, -2)]
+test_set <- wdbc3[ntest,]
+train_set <- wdbc3[-ntest,]
+nbclusters <- NbClust(wdbc3, method="kmeans")
+# kmeans_cluster <- kmeans(wdbc2, 2, nstart=200, iter.max=100)
+wdbc4 <- wdbc3 %>% mutate(cluster = nbclusters$Best.partition)
+table(wdbc3$cluster, wdbc2$diagnosis)
+table(wdbc2$diagnosis)
+fviz_cluster(object = kmeans_cluster, data=wdbc2)
+
+
 
 ```
 
 
 
 ```{r}
-set.seed(1)
-ntest <- sample(1:569, 114, replace=FALSE)
-test_set <- wdbc2[ntest, -1]
-train_set <- wdbc2[-ntest, -1]
-kmeans_cluster <- kmeans(train_set, 2, nstart=20)
-table(kmeans_cluster$cluster, test_set$diagnosis)
-
 
 
 ```
