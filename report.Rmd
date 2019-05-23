@@ -27,7 +27,7 @@ library(NbClust)
 library(factoextra)
 # Importation des données
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
-
+wdbc_blind <- wdbc[c(-1, -2)]
 # Nom des colonnes
 colnames <- c("radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity",  "concave_points", "symmetry",  "fractal_dimension")
 variables <- gsub("_", " ", colnames) %>% str_to_title
@@ -43,10 +43,7 @@ wdbc2 <- wdbc
 wdbc2$diagnosis[wdbc2$diagnosis=="B"] <- 0
 wdbc2$diagnosis[wdbc2$diagnosis=="M"] <- 1
 wdbc2[2] <- wdbc2[2] %>% unlist %>% as.numeric
-# Découpage selon mean, worst, se, en gardant diagnostic, en éliminant id
-wdbc2_mean <- wdbc2[,2:12]
-wdbc2_worst <- wdbc2[,c(2,23:32)]
-wdbc2_se <- wdbc2[, c(2, 13:22)]
+
 
 ```
 
@@ -163,6 +160,11 @@ lapply(colnames_worst, draw_g) %>% plot_grid(plotlist = .)
 Diagramme de corrélation des valeurs moyennes :
 
 ```{r}
+
+wdbc2_mean <- wdbc2[,2:12]
+wdbc2_worst <- wdbc2[,c(2,23:32)]
+wdbc2_se <- wdbc2[, c(2, 13:22)]
+
 corrplot(cor(wdbc2_mean), type="upper", method="number", order="hclust", 
           col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
 corrplot(cor(wdbc2_worst), type="upper", method="number", order="hclust", 
@@ -175,31 +177,24 @@ corrplot(cor(wdbc2_se), type="upper", method="number", order="hclust",
 K-means :
 
 ```{r}
-# (rappel : wdbc2, c'est wdbc avec les diagnostics numériques)
+# (rappel : wdbc2, c'est wdbc avec les diagnostics en numérique)
+
+wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
+nbclusters <- NbClust(wdbc_scaled, method="kmeans")
+wdbc_kmeans <- wdbc2 %>% mutate(cluster = nbclusters$Best.partition)
+table(wdbc3$cluster, wdbc2$diagnosis)
+fviz_cluster(nbclusters$Best.nc, data=wdbc2)
+
+```
+L'algorithme a reconnu deux clusters : le cluster 1 de 189 observations, et le cluster 2 qui en comprend 380.
+
+
+```{r}
 
 set.seed(1)
 ntest <- sample(1:569, 114, replace=FALSE)
 test_set <- wdbc2[ntest,]
 train_set <- wdbc2[-ntest,]
-
-data_kmeans <- wdbc
-wdbc3_scaled <- wdbc2[, c(-1, -2)] %>% apply(2, FUN=scale) %>% as.data.frame
-nbclusters <- NbClust(wdbc3_scaled, method="kmeans")
-wdbc4 <- wdbc3 %>% mutate(cluster = nbclusters$Best.partition)
-table(wdbc4$cluster, wdbc2$diagnosis)
-table(wdbc4$cluster)
-table(wdbc$diagnosis)
-fviz_cluster(object = kmeans_cluster, data=wdbc2)
-
-
-
-
-```
-
-
-
-```{r}
-
 
 ```
 
