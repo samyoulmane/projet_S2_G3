@@ -29,15 +29,25 @@ library(factoextra)
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
 
 # Nom des colonnes
-colnames1 <- c("radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity",  "concave_points", "symmetry",  "fractal_dimension")
-colnames_mean <- paste0(colnames1, "_mean")
-colnames_se <- paste0(colnames1, "_se")
-colnames_worst <- paste0(colnames1, "_worst")
+colnames <- c("radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity",  "concave_points", "symmetry",  "fractal_dimension")
+variables <- gsub("_", " ", colnames) %>% str_to_title
+colnames_mean <- paste0(colnames, "_mean")
+colnames_se <- paste0(colnames, "_se")
+colnames_worst <- paste0(colnames, "_worst")
 colnames_all <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_worst)
 colnames(wdbc) <- colnames_all
-wdbc$diagnosis <- factor(wdbc$diagnosis)
 
-variables <- c('Radius', 'Texture', 'Perimeter', 'Area', 'Smoothness', 'Compactness', 'Concavity', 'Concave points', 'Symmetry', 'Fractal dimension')
+
+# Diagnostic en numérique (0=B, 1=M)
+wdbc2 <- wdbc
+wdbc2$diagnosis[wdbc2$diagnosis=="B"] <- 0
+wdbc2$diagnosis[wdbc2$diagnosis=="M"] <- 1
+wdbc2[2] <- wdbc2[2] %>% unlist %>% as.numeric
+# Découpage selon mean, worst, se, en gardant diagnostic, en éliminant id
+wdbc2_mean <- wdbc2[,2:12]
+wdbc2_worst <- wdbc2[,c(2,23:32)]
+wdbc2_se <- wdbc2[, c(2, 13:22)]
+
 ```
 
 ***
@@ -135,42 +145,29 @@ draw_g <- function(value = "radius_mean") {
 
 
 ```{r var_graph_mean, fig.cap='Graphique 1 : répartition des moyennes pour chaque variable'}
-features_mean <- c("radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean", "concave_points_mean", "symmetry_mean", "fractal_dimension_mean")
-lapply(features_mean, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_mean, draw_g) %>% plot_grid(plotlist = .)
 ```
 
 ***
 
 ```{r var_graph_se, fig.cap='Graphique 2 : répartition des erreurs standard pour chaque variable'}
-features_se <- c("radius_se", "texture_se", "perimeter_se", "area_se", "smoothness_se", "compactness_se", "concavity_se", "concave_points_se", "symmetry_se", "fractal_dimension_se")
-lapply(features_se, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_se, draw_g) %>% plot_grid(plotlist = .)
 ```
 
 ***
 
 ```{r var_graph_worst, fig.cap='Graphique 3 : répartition des pires valeurs pour chaque variable'}
-features_worst <- c("radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave_points_worst", "symmetry_worst", "fractal_dimension_worst")
-lapply(features_worst, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_worst, draw_g) %>% plot_grid(plotlist = .)
 ```
 
 Diagramme de corrélation des valeurs moyennes :
 
 ```{r}
-wdbc2 <- wdbc
-wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("M"="1", "B"="2"))
-wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"="2"))
-wdbc2$diagnosis <- wdbc2$diagnosis %>% as.numeric
-wdbc_mean <- wdbc2[,2:12]
-wdbc_worst <- wdbc2[,c(2,23:32)]
-wdbc_se <- wdbc2[, c(2, 13:22)]
-M <-cor(wdbc_mean)
-W <- cor(wdbc_worst)
-SE <- cor(wdbc_se)
-corrplot(M, type="upper", method="number", order="hclust", 
+corrplot(cor(wdbc2_mean), type="upper", method="number", order="hclust", 
           col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
-corrplot(W, type="upper", method="number", order="hclust", 
+corrplot(cor(wdbc2_worst), type="upper", method="number", order="hclust", 
           col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
-corrplot(SE, type="upper", method="number", order="hclust", 
+corrplot(cor(wdbc2_se), type="upper", method="number", order="hclust", 
           col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
 
 ```
@@ -178,17 +175,22 @@ corrplot(SE, type="upper", method="number", order="hclust",
 K-means :
 
 ```{r}
+# (rappel : wdbc2, c'est wdbc avec les diagnostics numériques)
+
 set.seed(1)
 ntest <- sample(1:569, 114, replace=FALSE)
-wdbc3 <- wdbc2[, c(-1, -2)]
-test_set <- wdbc3[ntest,]
-train_set <- wdbc3[-ntest,]
-nbclusters <- NbClust(wdbc3, method="kmeans")
-# kmeans_cluster <- kmeans(wdbc2, 2, nstart=200, iter.max=100)
+test_set <- wdbc2[ntest,]
+train_set <- wdbc2[-ntest,]
+
+data_kmeans <- wdbc
+wdbc3_scaled <- wdbc2[, c(-1, -2)] %>% apply(2, FUN=scale) %>% as.data.frame
+nbclusters <- NbClust(wdbc3_scaled, method="kmeans")
 wdbc4 <- wdbc3 %>% mutate(cluster = nbclusters$Best.partition)
-table(wdbc3$cluster, wdbc2$diagnosis)
-table(wdbc2$diagnosis)
+table(wdbc4$cluster, wdbc2$diagnosis)
+table(wdbc4$cluster)
+table(wdbc$diagnosis)
 fviz_cluster(object = kmeans_cluster, data=wdbc2)
+
 
 
 
