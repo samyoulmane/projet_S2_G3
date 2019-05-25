@@ -1,0 +1,146 @@
+---
+title: "Analyse descriptive"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.align = "center", fig.width = 10)
+
+# Libs
+library(tidyverse)
+library(DT)
+library(desctable)
+library(cowplot)
+library(corrplot)
+library(RColorBrewer)
+
+# Importation des données
+wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
+
+# Nom des colonnes
+colnames(wdbc) <- c("id", "diagnosis", "radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean",  "concave_points_mean", "symmetry_mean",  "fractal_dimension_mean", "radius_se", "texture_se", "perimeter_se", "area_se", "smoothness_se", "compactness_se", "concavity_se", "concave_points_se", "symmetry_se", "fractal_dimension_se", "radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave_points_worst", "symmetry_worst", "fractal_dimension_worst")
+
+wdbc$diagnosis <- factor(wdbc$diagnosis)
+
+variables <- c('Radius', 'Texture', 'Perimeter', 'Area', 'Smoothness', 'Compactness', 'Concavity', 'Concave points', 'Symmetry', 'Fractal dimension')
+```
+
+## Description de la population
+
+Le jeu de données est constitué de `r nrow(wdbc)` entrées. Chacune de ces entrées correspond à une personne atteinte d'un cancer du sein chez qui une biopsie de la tumeur a été effectuée. Les noyaux des cellules tumorales on ensuite été énalysé et les données recueillies sont présentées dans le tableau ci-dessous. Pour chaque variable, on a **la moyenne** (mean), **l'erreur standard** (SE) et **la "pire"" valeur** (worst, c'est-à-dire la moyenne des trois plus grandes valeurs de la variable).
+
+```{r table_desc_1}
+
+sketch = htmltools::withTags(table(
+  class = 'display',
+  thead(
+    tr(
+      th(rowspan = 2, 'ID'),
+      th(rowspan = 2, 'Diagnosis'),
+      th(colspan = 3, 'Radius'),
+      th(colspan = 3, 'Texture'),
+      th(colspan = 3, 'Perimeter'),
+      th(colspan = 3, 'Area'),
+      th(colspan = 3, 'Smoothness'),
+      th(colspan = 3, 'Compactness'),
+      th(colspan = 3, 'Concavity'),
+      th(colspan = 3, 'Concave points'),
+      th(colspan = 3, 'Symmetry'),
+      th(colspan = 3, 'Fractal dimension')
+    ),
+    tr(
+      lapply(rep(c('Mean', 'SE', 'Worst'), 10), th)
+    )
+  )
+))
+
+df <- data.frame(wdbc$id, wdbc$diagnosis,
+           wdbc[,3], wdbc[,13], wdbc[,23],
+           wdbc[,4], wdbc[,14], wdbc[,24],
+           wdbc[,5], wdbc[,15], wdbc[,25],
+           wdbc[,6], wdbc[,16], wdbc[,26],
+           wdbc[,7], wdbc[,17], wdbc[,27],
+           wdbc[,8], wdbc[,18], wdbc[,28],
+           wdbc[,9], wdbc[,19], wdbc[,29],
+           wdbc[,10], wdbc[,20], wdbc[,30],
+           wdbc[,11], wdbc[,21], wdbc[,31],
+           wdbc[,12], wdbc[,22], wdbc[,32])
+
+DT::datatable(df, container = sketch, rownames = FALSE, options = list(scrollY = '350px', scrollX = 'true', paging = FALSE, dom = 'tp'),
+              caption = 'Tableau 1 : jeu de données')
+
+```
+
+Les 10 variables mesurées sur les noyaux des cellules sont :
+
+1. **Radius** : le rayon du noyau, qui est la moyenne des distances entre le centre du noyau et des points sur le périmètre
+2. **Texture** : ecart-ype des valeurs des echelles de gris
+3. **Perimeter** : le périmètre du noyau
+6. **Area** : l'aire du noyau
+7. **Smoothness** : la variation locale des longueurs du rayon
+8. **Compactness**, compacité : perimeter^2 / area - 1
+9. **Concavity**, concavité : sévérité des portions concaves du contour
+10. **Concave points** : nombre de portions concaves du contour
+11. **Symmetry** : la symétrie du noyau
+12. **Fractal dimension** : "coastline approximation" - 1
+
+Chaque échantillon a un identifiant et un diagnostic associé à la tumeur (maligne, M ; ou bénin, B). Il y a `r (wdbc$diagnosis %>% table)["B"]` tumeurs bénines (`r round((wdbc$diagnosis %>% table)["B"]*100/nrow(wdbc),2)` %) et `r (wdbc$diagnosis %>% table)["M"]` (`r round((wdbc$diagnosis %>% table)["M"]*100/nrow(wdbc),2)` %) tumeurs malignes.
+
+Le tableau suivant résume quelques paramètres statistiques pour chaque variables :
+
+```{r table_desc_2}
+desctable(wdbc[,-1], stats = list("N"       = length,
+                             "%/Mean"  = is.factor ~ percent | (is.normal ~ mean),
+                             "sd"      = is.normal ~ sd,
+                             "Minimum" = min,
+                             "Med"     = is.normal ~ NA | median,
+                             "Maximum" = max,
+                             "IQR"     = is.normal ~ NA | IQR)) %>%
+  datatable(options = list(dom = 't', paging = FALSE, scrollY = '350px', scrollX = 'true'),
+            caption = 'Tableau 2 : paramètres statistiques pour chaque variable.')
+```
+
+La densité de répartition des valeurs de chaque variables est raportée dans les graphiques suivants.
+
+```{r fct_draw_g, include=FALSE}
+draw_g <- function(value = "radius_mean") {
+  ggplot(data = wdbc) +
+    aes_string(x = value, fill = "diagnosis") +
+    geom_density(adjust = 1) +
+    facet_wrap(vars(diagnosis)) +
+    theme_minimal() +
+    theme(legend.position = 'none',
+          axis.title.y = element_blank(), axis.text.y = element_blank())
+}
+```
+
+
+```{r var_graph_mean, fig.cap='Graphique 1 : répartition des moyennes pour chaque variable'}
+features_mean <- c("radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean", "concave_points_mean", "symmetry_mean", "fractal_dimension_mean")
+lapply(features_mean, draw_g) %>% plot_grid(plotlist = .)
+```
+
+***
+
+```{r var_graph_se, fig.cap='Graphique 2 : répartition des erreurs standard pour chaque variable'}
+features_se <- c("radius_se", "texture_se", "perimeter_se", "area_se", "smoothness_se", "compactness_se", "concavity_se", "concave_points_se", "symmetry_se", "fractal_dimension_se")
+lapply(features_se, draw_g) %>% plot_grid(plotlist = .)
+```
+
+***
+
+```{r var_graph_worst, fig.cap='Graphique 3 : répartition des pires valeurs pour chaque variable'}
+features_worst <- c("radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave_points_worst", "symmetry_worst", "fractal_dimension_worst")
+lapply(features_worst, draw_g) %>% plot_grid(plotlist = .)
+```
+
+
+
+
+
+
+
+
+
+
+

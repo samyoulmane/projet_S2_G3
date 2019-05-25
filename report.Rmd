@@ -119,6 +119,8 @@ desctable(wdbc[,-1], stats = list("N"       = length,
             caption = 'Tableau 2 : paramètres statistiques pour chaque variable.')
 ```
 
+### Densités de répartition {.tabset}
+
 La densité de répartition des valeurs de chaque variables est raportée dans les graphiques suivants.
 
 ```{r fct_draw_g, include=FALSE}
@@ -133,51 +135,207 @@ draw_g <- function(value = "radius_mean") {
 }
 ```
 
+#### Moyenne
 
 ```{r var_graph_mean, fig.cap='Graphique 1 : répartition des moyennes pour chaque variable'}
 features_mean <- c("radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean", "concave_points_mean", "symmetry_mean", "fractal_dimension_mean")
 lapply(features_mean, draw_g) %>% plot_grid(plotlist = .)
 ```
 
-***
+#### SE
 
 ```{r var_graph_se, fig.cap='Graphique 2 : répartition des erreurs standard pour chaque variable'}
 features_se <- c("radius_se", "texture_se", "perimeter_se", "area_se", "smoothness_se", "compactness_se", "concavity_se", "concave_points_se", "symmetry_se", "fractal_dimension_se")
 lapply(features_se, draw_g) %>% plot_grid(plotlist = .)
 ```
 
-***
+#### Worst
 
 ```{r var_graph_worst, fig.cap='Graphique 3 : répartition des pires valeurs pour chaque variable'}
 features_worst <- c("radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave_points_worst", "symmetry_worst", "fractal_dimension_worst")
 lapply(features_worst, draw_g) %>% plot_grid(plotlist = .)
 ```
 
-Diagramme de corrélation des valeurs moyennes :
+### Corrélations {.tabset}
 
-```{r}
+Pour savoir quelles sont les variables corrélées entre elles, on trace un diagrammes de corrélation  :
+
+#### Moyennes
+
+```{r correlation_plot_mean}
 wdbc2 <- wdbc
-wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("M"="1", "B"="2"))
-wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"="2"))
-wdbc2$diagnosis <- wdbc2$diagnosis %>% as.numeric
+wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("M"="1", "B"="2")) %>% as.numeric
 wdbc_mean <- wdbc2[,2:12]
-wdbc_worst <- wdbc2[,c(2,23:32)]
-wdbc_se <- wdbc2[, c(2, 13:22)]
-M <-cor(wdbc_mean)
-W <- cor(wdbc_worst)
-SE <- cor(wdbc_se)
-corrplot(M, type="upper", method="number", order="hclust", 
-          col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
-corrplot(W, type="upper", method="number", order="hclust", 
-          col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
-corrplot(SE, type="upper", method="number", order="hclust", 
-          col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
-
+cor(wdbc_mean) %>% 
+  corrplot(type="upper", method="number", order="hclust", 
+           col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
 ```
 
-K-means :
+#### SE
 
-```{r}
+```{r correlation_plot_se}
+wdbc_se <- wdbc2[, c(2, 13:22)]
+cor(wdbc_se) %>% 
+  corrplot(type="upper",
+           method="number",
+           order="hclust", 
+           col=brewer.pal(n=8, name="RdYlBu"),
+           diag=FALSE)
+```
+
+#### Worst
+
+```{r correlation_plot_worst}
+wdbc_worst <- wdbc2[,c(2,23:32)]
+cor(wdbc_worst) %>%
+  corrplot(type="upper",
+           method="number",
+           order="hclust", 
+           col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
+```
+
+## Description des variables
+
+### Diagnostic
+
+C'est une variable catégorielle binaire qui renseigne sur le diagnostic associé à l'échantillon. Elle prend soit la valeur "B" pour désigner une tumeur bénine, soit la valeur "M" pour une tumeur maligne.
+
+```{r graph_diagnosis}
+ggplot(data = wdbc) +
+  aes(x = diagnosis, fill = diagnosis) +
+  geom_bar(width = 0.5) +
+  labs(title = 'Nombre de tumeurs en fonction du diagnostic',
+    x = 'Diagnostic', y = 'Nombre') +
+  annotate("text", c(1, 2), c(375, 230), label = c("357 (62,74 %)", "212 (37,26 %)")) +
+  theme_minimal() +
+  theme(legend.position = 'none')
+```
+
+Ainsi, on voit que deux tiers des tumeurs sont bénignes.
+
+### Taille du noyau
+
+Trois variables numériques continues renseignent sur la **taille** du noyau des cellules : le rayon (radius), le périmètre (perimeter) et l'aire (area). Elles sont corrélées entre elles et liées par des relations mathématiques.
+
+```{r functions_desc_var, include=FALSE}
+# Construit un graphique pour représenter une variable (boxplot + nuage de point) en fonction de la catégorie diagnostique
+show.var <- function(variable, titre = "", abscisses = "", limites = NA) {
+  ggplot(data = wdbc) +
+    aes_string(x = "diagnosis", y = variable, fill = "diagnosis") +
+    geom_boxplot() +
+    geom_jitter(width = 0.1, alpha = 0.4) +
+    theme_minimal() +
+    theme(legend.position = 'none') +
+    scale_y_continuous(limits = limites) +
+    labs(x = "Diagnostic", title = titre, y = abscisses) +
+    coord_flip()
+}
+
+# Construit une grille avec, pour chaque variable 3 graphiques : moyenne, erreur standard et worst.
+# Les limites sont les mêmes, automatiquement calculées et alignées pour les graphiques de la moyenne et de worst pour permettre des les comparer
+graphs.grid <- function(variable, variable.title, m = F) {
+  # Calcul des limites pour les graphiques de moyenne et de pire
+  limites = c(min(wdbc[,paste0(variable, "_mean")])*0.8, max(wdbc[,paste0(variable, "_worst")])*1.1)
+  # Calcul des limites pour le graphique de l'erreur standard
+  limites_se = c(0, max(wdbc[,paste0(variable, "_se")]))
+  # Grille
+  plot_grid(align = "hv",
+    show.var(paste0(variable, "_mean"),
+             str_to_sentence(paste0(variable.title, ifelse(m == T, " moyen", " moyenne"),' des noyaux')),
+             str_to_sentence(paste0(variable.title, ifelse(m == T, " moyen", " moyenne"))),
+             limites),
+    show.var(paste0(variable, "_se"),
+             paste0('Erreur standard ',
+ifelse(m == T, "du ", ifelse(variable.title == "aire", "de l'", "de la ")), variable.title, ifelse(m == T, " moyen ", " moyenne "),'
+des noyaux'),
+             'Erreur standard',
+             limites_se),
+    show.var(paste0(variable, "_worst"),
+             paste0('Pire ', variable.title,' des noyaux'),
+             paste0('Pire ', variable.title),
+             limites))
+}
+```
+
+#### Rayon
+
+```{r radius_graphs, warning=FALSE, message=FALSE}
+graphs.grid("radius", "rayon", T)
+```
+
+#### Périmètre
+
+```{r perimeter_graphs, warning=FALSE, message=FALSE}
+graphs.grid("perimeter", "périmètre", T)
+```
+
+#### Aire
+
+```{r area_graphs, warning=FALSE, message=FALSE}
+graphs.grid("area", "aire")
+```
+
+### Aspect
+
+L'aspect du noyau est raporté par deux variables numériques continues : la compacité et la texture. Comme pour la taille du  noyau, les valeurs pour les tumeurs malignes sont plus élevées que pour les bénignes.
+
+#### Compactness
+
+La compacité est calculée par la formule suivante : $\frac{perimeter^2}{area} - 1$
+
+```{r compactness_graphs, warning=FALSE, message=FALSE}
+graphs.grid("compactness", "compacité")
+```
+
+#### Texture
+
+La texture du noyau est calculée à partie de l'ecart-type des valeurs des échelles de gris.
+
+```{r texture_graphs, warning=FALSE, message=FALSE}
+graphs.grid("texture", "texture")
+```
+
+### Forme du noyau
+
+Cinq variables numériques continues ont été mesurées pour rendre compte de la forme du noyau. On voit que la différence entre les cellules malignes et bénignes est la plus marquée pour les variables `concavity` et `concave points`. Les cellules tumorales malignes ont donc un noyau avec des contours plus concaves par rapport aux cellules bénines. La dimension fractale par contre n'est pas différente entre les deux types de cellules.
+
+#### Smoothness
+
+```{r smoothness_graphs, warning=FALSE, message=FALSE}
+graphs.grid("smoothness", "régularité")
+```
+
+#### Concavity
+
+```{r concavity_graphs, warning=FALSE, message=FALSE}
+graphs.grid("concavity", "concavité")
+```
+
+#### Concave points
+
+```{r concave_points_graphs, warning=FALSE, message=FALSE}
+graphs.grid("concave_points", "nombre de points concaves", T)
+```
+
+#### Symmetry
+
+```{r symmetry_graphs, warning=FALSE, message=FALSE}
+graphs.grid("symmetry", "symétrie")
+```
+
+#### Fractal dimension
+
+La dimension fractale est une variable numérique continue. Elle renseigne sur l'irrégularité des contours du noyau des cellules.
+
+```{r fractal_dimension_graphs, warning=FALSE, message=FALSE}
+graphs.grid("fractal_dimension", "dimension fractale")
+```
+
+# Clustering
+
+## K-means
+
+```{r include=FALSE, eval=FALSE}
 set.seed(1)
 ntest <- sample(1:569, 114, replace=FALSE)
 wdbc3 <- wdbc2[, c(-1, -2)]
@@ -190,14 +348,19 @@ table(wdbc3$cluster, wdbc2$diagnosis)
 table(wdbc2$diagnosis)
 fviz_cluster(object = kmeans_cluster, data=wdbc2)
 
-
-
 ```
 
+## Clustering hiérarchique
 
+## Autre
 
-```{r}
+# Classification
 
+## Arbres de décisions
 
-```
+## k plus proches voisins
+
+## Random forest
+
+## Comparaison des modèles
 
