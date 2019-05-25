@@ -181,12 +181,24 @@ K-means :
 
 wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
 nbclusters <- NbClust(wdbc_scaled, method="kmeans")
-wdbc_kmeans <- wdbc2 %>% mutate(cluster = nbclusters$Best.partition)
-table(wdbc3$cluster, wdbc2$diagnosis)
+wdbc2 <- wdbc2 %>% mutate(cluster_kmeans = nbclusters$Best.partition)
+table(wdbc_scaled$cluster_kmeans, wdbc2$diagnosis)
 fviz_cluster(nbclusters$Best.nc, data=wdbc2)
 
 ```
 L'algorithme a reconnu deux clusters : le cluster 1 de 189 observations, et le cluster 2 qui en comprend 380.
+
+
+Hierarchical clustering :
+```{r}
+
+wdbc_hclust <- hclust(dist(wdbc_scaled), method="average") %>% cutree(2)
+
+table(wdbc_hclust, wdbc2$diagnosis)
+
+```
+
+
 
 
 ```{r}
