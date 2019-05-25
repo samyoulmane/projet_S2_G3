@@ -174,7 +174,9 @@ corrplot(cor(wdbc2_se), type="upper", method="number", order="hclust",
 
 ```
 
-K-means :
+# Clustering 
+ 
+## K-means :
 
 ```{r}
 # (rappel : wdbc2, c'est wdbc avec les diagnostics en numérique)
@@ -182,14 +184,14 @@ K-means :
 wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
 nbclusters <- NbClust(wdbc_scaled, method="kmeans")
 wdbc2 <- wdbc2 %>% mutate(cluster_kmeans = nbclusters$Best.partition)
-table(wdbc_scaled$cluster_kmeans, wdbc2$diagnosis)
+table(wdbc$cluster_kmeans, wdbc2$diagnosis)
 fviz_cluster(nbclusters$Best.nc, data=wdbc2)
 
 ```
 L'algorithme a reconnu deux clusters : le cluster 1 de 189 observations, et le cluster 2 qui en comprend 380.
 
 
-Hierarchical clustering :
+## Hierarchical clustering :
 ```{r}
 
 wdbc_hclust <- hclust(dist(wdbc_scaled), method="average") %>% cutree(2)
@@ -199,7 +201,7 @@ table(wdbc_hclust, wdbc2$diagnosis)
 ```
 
 
-
+# Classification
 
 ```{r}
 
