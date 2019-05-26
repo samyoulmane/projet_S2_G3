@@ -124,38 +124,69 @@ desctable(wdbc[,-1], stats = list("N"       = length,
             caption = 'Tableau 2 : paramètres statistiques pour chaque variable.')
 ```
 
-### Densités de répartition {.tabset}
+### Densités de répartition
 
 La densité de répartition des valeurs de chaque variables est raportée dans les graphiques suivants.
 
 ```{r fct_draw_g, include=FALSE}
-draw_g <- function(value = "radius_mean") {
-  ggplot(data = wdbc) +
-    aes_string(x = value, fill = "diagnosis") +
+draw_g <- function(value = "radius_mean", var_fill = NA, facet_diag = T) {
+  g <- ggplot(data = wdbc) +
+    aes_string(x = value) +
     geom_density(adjust = 1) +
-    facet_wrap(vars(diagnosis)) +
     theme_minimal() +
     theme(legend.position = 'none',
           axis.title.y = element_blank(), axis.text.y = element_blank())
+  if (facet_diag == T) {
+    g <- g + facet_wrap(vars(diagnosis))
+  }
+  if (!is.na(var_fill)) {
+    g <- g + aes_string(fill = var_fill)
+  }
+  g
 }
 ```
 
-#### Moyenne {-}
+#### Malins et bénins confondus {.tabset}
+
+On voit que pour certaines variables comme le périmètre ou le nombre de points concaves, on a une distribution bimodale.
+
+##### Moyenne {-}
+
+```{r}
+lapply(colnames_mean, draw_g, facet_diag = FALSE) %>% plot_grid(plotlist = .)
+```
+
+##### SE {-}
+
+```{r}
+lapply(colnames_se, draw_g, facet_diag = FALSE) %>% plot_grid(plotlist = .)
+```
+
+##### Worst {-}
+
+```{r}
+lapply(colnames_worst, draw_g, facet_diag = FALSE) %>% plot_grid(plotlist = .)
+```
+
+
+#### En fonction du diagnostic {.tabset}
+
+##### Moyenne {-}
 
 ```{r var_graph_mean, fig.cap='Graphique 1 : répartition des moyennes pour chaque variable'}
-lapply(colnames_mean, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_mean, draw_g, var_fill = "diagnosis") %>% plot_grid(plotlist = .)
 ```
 
-#### SE {-}
+##### SE {-}
 
 ```{r var_graph_se, fig.cap='Graphique 2 : répartition des erreurs standard pour chaque variable'}
-lapply(colnames_se, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_se, draw_g, var_fill = "diagnosis") %>% plot_grid(plotlist = .)
 ```
 
-#### Worst {-}
+##### Worst {-}
 
 ```{r var_graph_worst, fig.cap='Graphique 3 : répartition des pires valeurs pour chaque variable'}
-lapply(colnames_worst, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_worst, draw_g, var_fill = "diagnosis") %>% plot_grid(plotlist = .)
 ```
 
 ### Corrélations {.tabset}

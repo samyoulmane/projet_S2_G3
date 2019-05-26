@@ -15,7 +15,7 @@ library(corrplot)
 library(RColorBrewer)
 
 # Importation des données
-wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
+wdbc <- read_csv("../data/wdbc.data", col_names = FALSE)
 
 # Nom des colonnes
 colnames(wdbc) <- c("id", "diagnosis", "radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean",  "concave_points_mean", "symmetry_mean",  "fractal_dimension_mean", "radius_se", "texture_se", "perimeter_se", "area_se", "smoothness_se", "compactness_se", "concavity_se", "concave_points_se", "symmetry_se", "fractal_dimension_se", "radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave_points_worst", "symmetry_worst", "fractal_dimension_worst")
@@ -103,35 +103,42 @@ desctable(wdbc[,-1], stats = list("N"       = length,
 La densité de répartition des valeurs de chaque variables est raportée dans les graphiques suivants.
 
 ```{r fct_draw_g, include=FALSE}
-draw_g <- function(value = "radius_mean") {
-  ggplot(data = wdbc) +
-    aes_string(x = value, fill = "diagnosis") +
+draw_g <- function(value = "radius_mean", var_fill = NA, facet_diag = T) {
+  g <- ggplot(data = wdbc) +
+    aes_string(x = value) +
     geom_density(adjust = 1) +
-    facet_wrap(vars(diagnosis)) +
     theme_minimal() +
     theme(legend.position = 'none',
           axis.title.y = element_blank(), axis.text.y = element_blank())
+  if (facet_diag == T) {
+    g <- g + facet_wrap(vars(diagnosis))
+  }
+  if (!is.na(var_fill)) {
+    g <- g + aes_string(fill = var_fill)
+  }
+  g
 }
 ```
 
 
 ```{r var_graph_mean, fig.cap='Graphique 1 : répartition des moyennes pour chaque variable'}
 features_mean <- c("radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean", "concave_points_mean", "symmetry_mean", "fractal_dimension_mean")
-lapply(features_mean, draw_g) %>% plot_grid(plotlist = .)
+lapply(features_mean, draw_g, var_fill = "diagnosis") %>% plot_grid(plotlist = .)
 ```
 
 ***
 
 ```{r var_graph_se, fig.cap='Graphique 2 : répartition des erreurs standard pour chaque variable'}
 features_se <- c("radius_se", "texture_se", "perimeter_se", "area_se", "smoothness_se", "compactness_se", "concavity_se", "concave_points_se", "symmetry_se", "fractal_dimension_se")
-lapply(features_se, draw_g) %>% plot_grid(plotlist = .)
+lapply(features_se, draw_g, var_fill = "diagnosis") %>% plot_grid(plotlist = .)
+lapply(features_se, draw_g, facet_diag = FALSE) %>% plot_grid(plotlist = .)
 ```
 
 ***
 
 ```{r var_graph_worst, fig.cap='Graphique 3 : répartition des pires valeurs pour chaque variable'}
 features_worst <- c("radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave_points_worst", "symmetry_worst", "fractal_dimension_worst")
-lapply(features_worst, draw_g) %>% plot_grid(plotlist = .)
+lapply(features_worst, draw_g, var_fill = "diagnosis") %>% plot_grid(plotlist = .)
 ```
 
 
