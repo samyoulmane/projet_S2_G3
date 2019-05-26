@@ -29,6 +29,7 @@ library(dendextend)
 library(rpart)
 library(rpart.plot)
 library(class)
+library(randomForest)
 # Importation des données ####
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
 
@@ -40,8 +41,8 @@ colnames_se <- paste0(colnames, "_se")
 colnames_worst <- paste0(colnames, "_worst")
 colnames(wdbc) <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_worst)
 
-## Diagnosis en numérique (B=0, M=1)
-wdbc2 <- wdbc
+## Diagnosis en numérique (B=0, M=1), sans id
+wdbc2 <- wdbc[-1]
 wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"="0", "M"="1")) %>% as.numeric
 ```
 
@@ -124,38 +125,69 @@ desctable(wdbc[,-1], stats = list("N"       = length,
             caption = 'Tableau 2 : paramètres statistiques pour chaque variable.')
 ```
 
-### Densités de répartition {.tabset}
+### Densités de répartition
 
 La densité de répartition des valeurs de chaque variables est raportée dans les graphiques suivants.
 
 ```{r fct_draw_g, include=FALSE}
-draw_g <- function(value = "radius_mean") {
-  ggplot(data = wdbc) +
-    aes_string(x = value, fill = "diagnosis") +
+draw_g <- function(value = "radius_mean", var_fill = NA, facet_diag = T) {
+  g <- ggplot(data = wdbc) +
+    aes_string(x = value) +
     geom_density(adjust = 1) +
-    facet_wrap(vars(diagnosis)) +
     theme_minimal() +
     theme(legend.position = 'none',
           axis.title.y = element_blank(), axis.text.y = element_blank())
+  if (facet_diag == T) {
+    g <- g + facet_wrap(vars(diagnosis))
+  }
+  if (!is.na(var_fill)) {
+    g <- g + aes_string(fill = var_fill)
+  }
+  g
 }
 ```
 
-#### Moyenne {-}
+#### Malins et bénins confondus {.tabset}
+
+On voit que pour certaines variables comme le périmètre ou le nombre de points concaves, on a une distribution bimodale.
+
+##### Moyenne {-}
+
+```{r}
+lapply(colnames_mean, draw_g, facet_diag = FALSE) %>% plot_grid(plotlist = .)
+```
+
+##### SE {-}
+
+```{r}
+lapply(colnames_se, draw_g, facet_diag = FALSE) %>% plot_grid(plotlist = .)
+```
+
+##### Worst {-}
+
+```{r}
+lapply(colnames_worst, draw_g, facet_diag = FALSE) %>% plot_grid(plotlist = .)
+```
+
+
+#### En fonction du diagnostic {.tabset}
+
+##### Moyenne {-}
 
 ```{r var_graph_mean, fig.cap='Graphique 1 : répartition des moyennes pour chaque variable'}
-lapply(colnames_mean, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_mean, draw_g, var_fill = "diagnosis") %>% plot_grid(plotlist = .)
 ```
 
-#### SE {-}
+##### SE {-}
 
 ```{r var_graph_se, fig.cap='Graphique 2 : répartition des erreurs standard pour chaque variable'}
-lapply(colnames_se, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_se, draw_g, var_fill = "diagnosis") %>% plot_grid(plotlist = .)
 ```
 
-#### Worst {-}
+##### Worst {-}
 
 ```{r var_graph_worst, fig.cap='Graphique 3 : répartition des pires valeurs pour chaque variable'}
-lapply(colnames_worst, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_worst, draw_g, var_fill = "diagnosis") %>% plot_grid(plotlist = .)
 ```
 
 ### Corrélations {.tabset}
@@ -182,7 +214,9 @@ wdbc2_se <- wdbc2[, c(2, 13:22)]
 cor(wdbc2_se) %>% 
   corrplot(type="upper",
            method="number",
-           diag=FALSE)
+           diag=FALSE,
+           addCoefasPercent=TRUE,
+           cl.pos=FALSE)
 ```
 
 #### Worst {-}
@@ -192,7 +226,9 @@ wdbc2_worst <- wdbc2[,c(2,23:32)]
 cor(wdbc2_worst) %>%
   corrplot(type="upper",
            method="number",
-           diag=FALSE)
+           diag=FALSE,
+           addCoefasPercent=TRUE,
+           cl.pos=FALSE)
 ```
 
 ## Description des variables
@@ -401,10 +437,11 @@ table(wdbc_hclust, wdbc2$diagnosis)
 wdbc2_class <- wdbc2[-1]
 set.seed(42)
 ntest <- sample(1:569, 114, replace=FALSE)
+
 wdbc2_test <- wdbc2_class[ntest,]
 wdbc2_train <- wdbc2_class[-ntest,]
-wdbc2_test$diagnosis <- as.factor(wdbc2_test$diagnosis)
-wdbc2_train$diagnosis <- wdbc2_train$diagnosis %>% as.factor
+wdbc2_test$diagnosis <- wdbc2_test$diagnosis %>% as.numeric
+wdbc2_train$diagnosis <- wdbc2_train$diagnosis %>% as.numeric
 ```
 
 ## Arbres de décisions
@@ -419,18 +456,22 @@ table(dt.pred, wdbc2_test$diagnosis)
 
 ## k plus proches voisins
 ```{r}
-knn.pred <- knn(train = wdbc2_train, 
+wdbc_KNN <- knn(train = wdbc2_train, 
                 test = wdbc2_test , 
                 cl = wdbc2_train$diagnosis,
                 k = 5, prob=TRUE)
-table(knn.pred, wdbc2_test$diagnosis)
 
+dt.pred <- predict(wdbc_KNN, newdata = wdbc2_test , type = "class")
+table(knn.pred, wdbc2_test$diagnosis)
 
 ```
 ## Random forest
 ```{r}
 
+wdbc_RF <- randomForest(diagnosis ~ ., wdbc2_train, prox=TRUE)
 
+dt.pred <- predict(wdbc_RF, newdata=wdbc2_test ,type="class")
+table(dt.pred, wdbc2_test$diagnosis)
 ```
 
 ## Comparaison des modèles
