@@ -44,6 +44,8 @@ colnames(wdbc) <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_wors
 ## Diagnosis en numérique (B=0, M=1), sans id
 wdbc2 <- wdbc[-1]
 wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"="0", "M"="1")) %>% as.numeric
+
+
 ```
 
 ***
@@ -461,7 +463,7 @@ wdbc_KNN <- knn(train = wdbc2_train,
                 cl = wdbc2_train$diagnosis,
                 k = 5, prob=TRUE)
 
-dt.pred <- predict(wdbc_KNN, newdata = wdbc2_test , type = "class")
+dt.pred <- predict(wdbc_KNN, newdata = wdbc2_test)
 table(knn.pred, wdbc2_test$diagnosis)
 
 ```
