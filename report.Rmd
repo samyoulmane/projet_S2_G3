@@ -41,9 +41,7 @@ colnames(wdbc) <- colnames_all
 
 # Diagnostic en numérique (0=B, 1=M)
 wdbc2 <- wdbc
-wdbc2$diagnosis[wdbc2$diagnosis=="B"] <- 0
-wdbc2$diagnosis[wdbc2$diagnosis=="M"] <- 1
-wdbc2[2] <- wdbc2[2] %>% unlist %>% as.numeric
+wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("M"="1", "B"="2")) %>% as.numeric
 
 ```
 
