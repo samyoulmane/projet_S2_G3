@@ -14,6 +14,7 @@ subtitle: "Projet du 2e semestre - DFGSM3 - UE11 parcours d'informatique bioméd
 knitr::opts_chunk$set(echo = FALSE, fig.align = "center", fig.width = 10)
 
 # Libs
+library(plyr)
 library(readr)
 library(tidyverse)
 library(DT)
@@ -21,14 +22,12 @@ library(desctable)
 library(cowplot)
 library(corrplot)
 library(RColorBrewer)
-library(plyr)
 library(NbClust)
 library(factoextra)
 library(dendextend)
 
 # Importation des données ####
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
-wdbc$X2<- as.factor(wdbc$X2)
 
 # Nom des colonnes
 colnames <- c("radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity",  "concave_points", "symmetry",  "fractal_dimension")
@@ -36,16 +35,11 @@ variables <- gsub("_", " ", colnames) %>% str_to_title
 colnames_mean <- paste0(colnames, "_mean")
 colnames_se <- paste0(colnames, "_se")
 colnames_worst <- paste0(colnames, "_worst")
-colnames_all <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_worst)
-colnames(wdbc) <- colnames_all
+colnames(wdbc) <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_worst)
 
-## Données sans id ni diagnosis
-wdbc_blind <- wdbc[c(-1, -2)]
-## Diagnosis en numérique (M = 1, B = 2)
+## Diagnosis en numérique (B=0, M=1)
 wdbc2 <- wdbc
-wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("M"="1", "B"="2")) %>% as.numeric
-## Application de scale
-wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
+wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"="0", "M"="1")) %>% as.numeric
 ```
 
 ***
@@ -168,35 +162,34 @@ Pour savoir quelles sont les variables corrélées entre elles, on trace un diag
 #### Moyennes
 
 ```{r correlation_plot_mean}
-wdbc2 <- wdbc
-wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("M"="1", "B"="2")) %>% as.numeric
-wdbc_mean <- wdbc2[,2:12]
-cor(wdbc_mean) %>% 
-  corrplot(type="upper", method="number", order="hclust", 
-           col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
+wdbc2_mean <- wdbc2[,2:12]
+cor(wdbc2_mean) %>%
+  corrplot(type="upper", 
+           method="number", 
+           diag=FALSE,
+           addCoefasPercent=TRUE,
+           cl.pos=FALSE)
+
 ```
 
 #### SE
 
 ```{r correlation_plot_se}
-wdbc_se <- wdbc2[, c(2, 13:22)]
-cor(wdbc_se) %>% 
+wdbc2_se <- wdbc2[, c(2, 13:22)]
+cor(wdbc2_se) %>% 
   corrplot(type="upper",
            method="number",
-           order="hclust", 
-           col=brewer.pal(n=8, name="RdYlBu"),
            diag=FALSE)
 ```
 
 #### Worst
 
 ```{r correlation_plot_worst}
-wdbc_worst <- wdbc2[,c(2,23:32)]
-cor(wdbc_worst) %>%
+wdbc2_worst <- wdbc2[,c(2,23:32)]
+cor(wdbc2_worst) %>%
   corrplot(type="upper",
            method="number",
-           order="hclust", 
-           col=brewer.pal(n=8, name="RdYlBu"), diag=FALSE)
+           diag=FALSE)
 ```
 
 ## Description des variables
@@ -338,6 +331,12 @@ graphs.grid("fractal_dimension", "dimension fractale")
 
 # Clustering 
  
+```{r}
+## Données sans id ni diagnosis
+wdbc_blind <- wdbc[c(-1, -2)]
+## Application de scale
+wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
+```
 ## K-means :
 
 ```{r k_means, eval=FALSE}
@@ -362,6 +361,14 @@ table(wdbc_hclust, wdbc2$diagnosis)
 
 
 # Classification
+
+```{r}
+wdbc2_class <- wdbc2[-1]
+set.seed(1)
+ntest <- sample(1:569, 114, replace=FALSE)
+test_set <- wdbc2_class[ntest,]
+train_set <- wdbc2_class[-ntest,]
+```
 
 ## Arbres de décisions
 
