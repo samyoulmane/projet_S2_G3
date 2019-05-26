@@ -416,10 +416,8 @@ La démarche sera la même à chaque fois : on commencera d'abord avec les donn�
 Avant de pouvoir utiliser les algorithmes de clustering, on doit d'abord standardiser les données à l'aide de la fonction `scale`.
 
 ```{r scaling}
-# Données sans id ni diagnosis
-wdbc_blind <- wdbc[c(-1, -2)]
 # Application de scale
-wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
+wdbc_scaled <- wdbc2[-1] %>% apply(2, FUN=scale) %>% as.data.frame
 ```
 
 ## K-means
@@ -462,10 +460,13 @@ table(wdbc_hclust, wdbc2$diagnosis)
 ```{r split_data}
 
 set.seed(42)
-ntest <- sample(1:569, 114, replace=FALSE)
 
-wdbc2_test <- wdbc2[ntest,]
-wdbc2_train <- wdbc2[-ntest,]
+ntest <- sample(1:nrow(wdbc2), 0.2*nrow(wdbc2), replace=FALSE)
+wdbc2_test1 <- wdbc2[wdbc2$diagnosis=="1",] %>% sample_n(round(0.2*sum(wdbc2$diagnosis == 1)))
+wdbc2_test0 <- wdbc2[wdbc2$diagnosis=="0",] %>% sample_n(round(0.2*sum(wdbc2$diagnosis == 0)))
+wdbc2_test <- bind_rows(wdbc2_test1, wdbc2_test0)
+wdbc2_train <- anti_join(wdbc2, wdbc2_test)
+
 wdbc2_test$diagnosis <- wdbc2_test$diagnosis %>% as.factor
 wdbc2_train$diagnosis <- wdbc2_train$diagnosis %>% as.factor
 ```
@@ -474,9 +475,9 @@ wdbc2_train$diagnosis <- wdbc2_train$diagnosis %>% as.factor
 ```{r decision_tree}
 wdbc_DT <- rpart(diagnosis ~ ., data=wdbc2_train)
 rpart.plot(wdbc_DT)
-
-dt.pred <- predict(wdbc_DT, newdata=wdbc2_test ,type="class")
-table(dt.pred, wdbc2_test$diagnosis)
+          
+table_DT <- predict(wdbc_DT, newdata=wdbc2_test ,type="class") %>% 
+  table(wdbc2_test$diagnosis)
 
 ```
 
@@ -487,8 +488,7 @@ wdbc_KNN <- knn(train = wdbc2_train,
                 cl = wdbc2_train$diagnosis,
                 k = 5, prob=TRUE)
 
-dt.pred <- predict(wdbc_KNN, newdata = wdbc2_test)
-table(knn.pred, wdbc2_test$diagnosis)
+table_KNN <- table(wdbc_KNN, wdbc2_test$diagnosis)
 
 ```
 
@@ -496,14 +496,14 @@ table(knn.pred, wdbc2_test$diagnosis)
 
 ```{r eval=F}
 
-wdbc_RF <- randomForest(diagnosis ~ ., wdbc2_train, prox=TRUE)
-
-dt.pred <- predict(wdbc_RF, newdata=wdbc2_test ,type="class")
-table(dt.pred, wdbc2_test$diagnosis)
+wdbc_RF <- randomForest(diagnosis ~ ., wdbc2_train, prox=TRUE) %>% 
+              predict(wdbc_RF, newdata=wdbc2_test ,type="class") %>%
+              table(wdbc2_test$diagnosis)
 ```
 
 ## Comparaison des modèles
 ```{r}
+
 
 
 ```
