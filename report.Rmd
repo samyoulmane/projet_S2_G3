@@ -5,6 +5,7 @@ date: "2018/2019"
 output:
   html_document:
     toc: true
+    number_sections: true
     toc_float:
       collapsed: false
 subtitle: "Projet du 2e semestre - DFGSM3 - UE11 parcours d'informatique biomédicale"
@@ -137,19 +138,19 @@ draw_g <- function(value = "radius_mean") {
 }
 ```
 
-#### Moyenne
+#### Moyenne {-}
 
 ```{r var_graph_mean, fig.cap='Graphique 1 : répartition des moyennes pour chaque variable'}
 lapply(colnames_mean, draw_g) %>% plot_grid(plotlist = .)
 ```
 
-#### SE
+#### SE {-}
 
 ```{r var_graph_se, fig.cap='Graphique 2 : répartition des erreurs standard pour chaque variable'}
 lapply(colnames_se, draw_g) %>% plot_grid(plotlist = .)
 ```
 
-#### Worst
+#### Worst {-}
 
 ```{r var_graph_worst, fig.cap='Graphique 3 : répartition des pires valeurs pour chaque variable'}
 lapply(colnames_worst, draw_g) %>% plot_grid(plotlist = .)
@@ -159,7 +160,7 @@ lapply(colnames_worst, draw_g) %>% plot_grid(plotlist = .)
 
 Pour savoir quelles sont les variables corrélées entre elles, on trace un diagrammes de corrélation  :
 
-#### Moyennes
+#### Moyennes {-}
 
 ```{r correlation_plot_mean}
 wdbc2_mean <- wdbc2[,2:12]
@@ -172,7 +173,7 @@ cor(wdbc2_mean) %>%
 
 ```
 
-#### SE
+#### SE {-}
 
 ```{r correlation_plot_se}
 wdbc2_se <- wdbc2[, c(2, 13:22)]
@@ -182,7 +183,7 @@ cor(wdbc2_se) %>%
            diag=FALSE)
 ```
 
-#### Worst
+#### Worst {-}
 
 ```{r correlation_plot_worst}
 wdbc2_worst <- wdbc2[,c(2,23:32)]
@@ -255,19 +256,19 @@ des noyaux'),
 }
 ```
 
-#### Rayon
+#### Rayon {-}
 
 ```{r radius_graphs, warning=FALSE, message=FALSE}
 graphs.grid("radius", "rayon", T)
 ```
 
-#### Périmètre
+#### Périmètre {-}
 
 ```{r perimeter_graphs, warning=FALSE, message=FALSE}
 graphs.grid("perimeter", "périmètre", T)
 ```
 
-#### Aire
+#### Aire {-}
 
 ```{r area_graphs, warning=FALSE, message=FALSE}
 graphs.grid("area", "aire")
@@ -277,7 +278,7 @@ graphs.grid("area", "aire")
 
 L'aspect du noyau est raporté par deux variables numériques continues : la compacité et la texture. Comme pour la taille du  noyau, les valeurs pour les tumeurs malignes sont plus élevées que pour les bénignes.
 
-#### Compactness
+#### Compactness {-}
 
 La compacité est calculée par la formule suivante : $\frac{perimeter^2}{area} - 1$
 
@@ -285,7 +286,7 @@ La compacité est calculée par la formule suivante : $\frac{perimeter^2}{area} 
 graphs.grid("compactness", "compacité")
 ```
 
-#### Texture
+#### Texture {-}
 
 La texture du noyau est calculée à partie de l'ecart-type des valeurs des échelles de gris.
 
@@ -297,36 +298,68 @@ graphs.grid("texture", "texture")
 
 Cinq variables numériques continues ont été mesurées pour rendre compte de la forme du noyau. On voit que la différence entre les cellules malignes et bénignes est la plus marquée pour les variables `concavity` et `concave points`. Les cellules tumorales malignes ont donc un noyau avec des contours plus concaves par rapport aux cellules bénines. La dimension fractale par contre n'est pas différente entre les deux types de cellules.
 
-#### Smoothness
+#### Smoothness {-}
 
 ```{r smoothness_graphs, warning=FALSE, message=FALSE}
 graphs.grid("smoothness", "régularité")
 ```
 
-#### Concavity
+#### Concavity {-}
 
 ```{r concavity_graphs, warning=FALSE, message=FALSE}
 graphs.grid("concavity", "concavité")
 ```
 
-#### Concave points
+#### Concave points {-}
 
 ```{r concave_points_graphs, warning=FALSE, message=FALSE}
 graphs.grid("concave_points", "nombre de points concaves", T)
 ```
 
-#### Symmetry
+#### Symmetry {-}
 
 ```{r symmetry_graphs, warning=FALSE, message=FALSE}
 graphs.grid("symmetry", "symétrie")
 ```
 
-#### Fractal dimension
+#### Fractal dimension {-}
 
 La dimension fractale est une variable numérique continue. Elle renseigne sur l'irrégularité des contours du noyau des cellules.
 
 ```{r fractal_dimension_graphs, warning=FALSE, message=FALSE}
 graphs.grid("fractal_dimension", "dimension fractale")
+```
+
+## Variables pertinentes
+
+La figure ci dessous montre les coefficients de corrélation enntre le diagnostic et les autres variables.
+
+```{r cor_diag}
+cor_diag <- cor(wdbc2[,2], wdbc2[,c(2:32)])
+
+corrplot(cor_diag, method = "number", diag = F, cl.pos = F, addCoefasPercent = T, tl.col = 'black')
+
+cor_diag %>% t() %>% as.data.frame %>%
+  rownames_to_column %>%
+  dplyr::filter(diagnosis>0.5) %>%
+  arrange(desc(diagnosis)) %>%
+  select(rowname) %>%
+  unlist %>% as.vector -> var_pert
+
+var_pert <- var_pert[c(-1, -5, -7, -8, -9, -14, -16)]
+```
+
+Pour sélectionner les variables pertinentes, nous avons choisi de ne garder que celles qui sont corrélées à plus de 50% avec le diagnostic. Comme le périmètre, l'aire et le rayon sont liés entre eux, nous n'avons gardé que le périmètre, qui est la variable la plus corrélée des trois avec le diagnostic. On obtient alors `r length(var_pert)` variables pertinentes qui sont, de la plus corrélée à la moins corrélée : `r var_pert`.
+
+Le graphique ci dessous montre le nuage de point obtenu quand on croise les deux variables les plus corrélées :
+
+```{r graph_cor_diag}
+ggplot(data = wdbc) +
+  aes_string(x = var_pert[1], y = var_pert[2], color = "diagnosis") +
+  geom_point() +
+  labs(title = 'Variables les plus corrélées au diagnostic') +
+  scale_color_discrete(name = "Diagnostic") +
+  theme_minimal()
 ```
 
 # Clustering 
@@ -337,7 +370,8 @@ wdbc_blind <- wdbc[c(-1, -2)]
 ## Application de scale
 wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
 ```
-## K-means :
+
+## K-means
 
 ```{r k_means, eval=FALSE}
 # (rappel : wdbc2, c'est wdbc avec les diagnostics en numérique)
@@ -349,7 +383,7 @@ fviz_cluster(nbclusters$Best.nc, data=wdbc2)
 
 L'algorithme a reconnu deux clusters : le cluster 1 de 189 observations, et le cluster 2 qui en comprend 380.
 
-## Hierarchical clustering :
+## Hierarchical clustering
 
 ```{r h_clust}
 
@@ -358,7 +392,6 @@ wdbc_hclust <- dist(wdbc_scaled) %>% hclust("ward.D") %>% cutree(2)
 table(wdbc_hclust, wdbc2$diagnosis)
 
 ```
-
 
 # Classification
 

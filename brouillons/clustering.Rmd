@@ -1,0 +1,24 @@
+---
+title: "Clustering"
+output:
+  html_document:
+    df_print: paged
+---
+
+La deuxième étape de notre analyse consistera à utiliser des algorithmes de clustering pour identifier des groupes au sein des données.    
+Nous utiliserons trois algorithmes de clustering :
+
+- k-means clustering
+- clustering hiérarchique
+- EM 
+
+La démarche sera la même à chaque fois : on commencera d'abord avec les données "brutes" c'est-à-dire en utilisant *toutes* les variables et ensuite en utilisant seulement quelques variables sélectionnées. Notre but étant de pouvoir consituer des clusters proches des catégories diagnostiques (bénin/malin). Ce 
+
+## K-means
+
+### Holà {.tabset}
+
+#### Oulala {-}
+
+#### Ouloulou {-}
+

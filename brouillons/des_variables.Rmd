@@ -10,34 +10,43 @@ output:
       collapsed: no
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, fig.align = "center", message = FALSE, warning = FALSE)
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.align = "center", fig.width = 10)
 
 # Libs
 library(readr)
+library(plyr)
 library(tidyverse)
 library(DT)
 library(desctable)
 library(cowplot)
 library(corrplot)
 library(RColorBrewer)
-library(plyr)
 library(NbClust)
 library(factoextra)
+library(dendextend)
 
-# Importation des données
-wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
+
+# Importation des données ####
+wdbc <- read_csv("../data/wdbc.data", col_names = FALSE)
+wdbc$X2<- as.factor(wdbc$X2)
 
 # Nom des colonnes
-colnames1 <- c("radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity",  "concave_points", "symmetry",  "fractal_dimension")
-colnames_mean <- paste0(colnames1, "_mean")
-colnames_se <- paste0(colnames1, "_se")
-colnames_worst <- paste0(colnames1, "_worst")
+colnames <- c("radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity",  "concave_points", "symmetry",  "fractal_dimension")
+variables <- gsub("_", " ", colnames) %>% str_to_title
+colnames_mean <- paste0(colnames, "_mean")
+colnames_se <- paste0(colnames, "_se")
+colnames_worst <- paste0(colnames, "_worst")
 colnames_all <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_worst)
 colnames(wdbc) <- colnames_all
-wdbc$diagnosis <- factor(wdbc$diagnosis)
 
-variables <- c('Radius', 'Texture', 'Perimeter', 'Area', 'Smoothness', 'Compactness', 'Concavity', 'Concave points', 'Symmetry', 'Fractal dimension')
+## Données sans id ni diagnosis
+wdbc_blind <- wdbc[c(-1, -2)]
+## Diagnosis en numérique (M = 1, B = 2)
+wdbc2 <- wdbc
+wdbc2$diagnosis <- plyr::revalue(wdbc$diagnosis, c("M"="1", "B"="2")) %>% as.numeric
+## Application de scale
+wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
 ```
 
 ## Description des variables
@@ -175,4 +184,37 @@ La dimension fractale est une variable numérique continue. Elle renseigne sur l
 
 ```{r fractal_dimension_graphs, warning=FALSE, message=FALSE}
 graphs.grid("fractal_dimension", "dimension fractale")
+```
+
+## Variables pertimentes
+
+La figure ci dessous montre les coefficients de corrélation enntre le diagnostic et les autres variables.
+
+```{r cor_diag}
+cor_diag <- cor(wdbc2[,2], wdbc2[,c(2:32)])
+
+corrplot(cor_diag, method = "number", diag = F, cl.pos = F, addCoefasPercent = T, tl.col = 'black')
+
+cor_diag %>% t() %>% as.data.frame %>%
+  rownames_to_column %>%
+  dplyr::filter(diagnosis>0.5) %>%
+  arrange(desc(diagnosis)) %>%
+  select(rowname) %>%
+  unlist %>% as.vector -> var_pert
+
+var_pert <- var_pert[c(-1, -5, -7, -8, -9, -14, -16)]
+```
+
+
+Pour sélectionner les variables pertinentes, nous avons choisi de ne garder que celles qui sont corrélées à plus de 50% avec le diagnostic. Comme le périmètre, l'aire et le rayon sont liés entre eux, nous n'avons gardé que le périmètre, qui est la variable la plus corrélée des trois avec le diagnostic. On obtient alors `r length(var_pert)` variables pertinentes qui sont, de la plus corrélée à la moins corrélée : `r var_pert`.
+
+Le graphique ci dessous montre le nuage de point obtenu quand on croise les deux variables les plus corrélées :
+
+```{r graph_cor_diag}
+ggplot(data = wdbc) +
+  aes_string(x = var_pert[1], y = var_pert[2], color = "diagnosis") +
+  geom_point() +
+  labs(title = 'Variables les plus corrélées aux diagnostic') +
+  scale_color_discrete(name = "Diagnostic") +
+  theme_minimal()
 ```
