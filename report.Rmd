@@ -7,11 +7,10 @@ output:
     toc: true
     toc_float:
       collapsed: false
-  html_notebook: default
 subtitle: "Projet du 2e semestre - DFGSM3 - UE11 parcours d'informatique biomédicale"
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = FALSE, fig.align = "center", fig.width = 10)
 
 # Libs
@@ -25,10 +24,11 @@ library(RColorBrewer)
 library(plyr)
 library(NbClust)
 library(factoextra)
+library(dendextend)
 
-# Importation des données
+# Importation des données ####
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
-wdbc_blind <- wdbc[c(-1, -2)]
+wdbc$X2<- as.factor(wdbc$X2)
 
 # Nom des colonnes
 colnames <- c("radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity",  "concave_points", "symmetry",  "fractal_dimension")
@@ -39,10 +39,13 @@ colnames_worst <- paste0(colnames, "_worst")
 colnames_all <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_worst)
 colnames(wdbc) <- colnames_all
 
-# Diagnostic en numérique (0=B, 1=M)
+## Données sans id ni diagnosis
+wdbc_blind <- wdbc[c(-1, -2)]
+## Diagnosis en numérique (M = 1, B = 2)
 wdbc2 <- wdbc
 wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("M"="1", "B"="2")) %>% as.numeric
-
+## Application de scale
+wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
 ```
 
 ***
@@ -350,9 +353,8 @@ L'algorithme a reconnu deux clusters : le cluster 1 de 189 observations, et le c
 ## Hierarchical clustering :
 
 ```{r h_clust}
-wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
 
-wdbc_hclust <- hclust(dist(wdbc_scaled), method="average") %>% cutree(2)
+wdbc_hclust <- dist(wdbc_scaled) %>% hclust("ward.D") %>% cutree(2)
 
 table(wdbc_hclust, wdbc2$diagnosis)
 
