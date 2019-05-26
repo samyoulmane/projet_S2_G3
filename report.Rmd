@@ -199,7 +199,7 @@ Pour savoir quelles sont les variables corrélées entre elles, on trace un diag
 #### Moyennes {-}
 
 ```{r correlation_plot_mean}
-wdbc2_mean <- wdbc2[,2:12]
+wdbc2_mean <- wdbc2[,1:11]
 cor(wdbc2_mean) %>%
   corrplot(type="upper", 
            method="number", 
@@ -212,7 +212,7 @@ cor(wdbc2_mean) %>%
 #### SE {-}
 
 ```{r correlation_plot_se}
-wdbc2_se <- wdbc2[, c(2, 13:22)]
+wdbc2_se <- wdbc2[, c(1, 12:21)]
 cor(wdbc2_se) %>% 
   corrplot(type="upper",
            method="number",
@@ -224,7 +224,7 @@ cor(wdbc2_se) %>%
 #### Worst {-}
 
 ```{r correlation_plot_worst}
-wdbc2_worst <- wdbc2[,c(2,23:32)]
+wdbc2_worst <- wdbc2[, c(1,22:31)]
 cor(wdbc2_worst) %>%
   corrplot(type="upper",
            method="number",
@@ -375,7 +375,7 @@ graphs.grid("fractal_dimension", "dimension fractale")
 La figure ci dessous montre les coefficients de corrélation enntre le diagnostic et les autres variables.
 
 ```{r cor_diag}
-cor_diag <- cor(wdbc2[,2], wdbc2[,c(2:32)])
+cor_diag <- cor(wdbc2[,1], wdbc2[,c(1:31)])
 
 corrplot(cor_diag, method = "number", diag = F, cl.pos = F, addCoefasPercent = T, tl.col = 'black')
 
@@ -459,19 +459,19 @@ table(wdbc_hclust, wdbc2$diagnosis)
 
 # Classification
 
-```{r}
-wdbc2_class <- wdbc2[-1]
+```{r split_data}
+
 set.seed(42)
 ntest <- sample(1:569, 114, replace=FALSE)
 
-wdbc2_test <- wdbc2_class[ntest,]
-wdbc2_train <- wdbc2_class[-ntest,]
-wdbc2_test$diagnosis <- wdbc2_test$diagnosis %>% as.numeric
-wdbc2_train$diagnosis <- wdbc2_train$diagnosis %>% as.numeric
+wdbc2_test <- wdbc2[ntest,]
+wdbc2_train <- wdbc2[-ntest,]
+wdbc2_test$diagnosis <- wdbc2_test$diagnosis %>% as.factor
+wdbc2_train$diagnosis <- wdbc2_train$diagnosis %>% as.factor
 ```
 
 ## Arbres de décisions
-```{r}
+```{r decision_tree}
 wdbc_DT <- rpart(diagnosis ~ ., data=wdbc2_train)
 rpart.plot(wdbc_DT)
 
@@ -481,7 +481,7 @@ table(dt.pred, wdbc2_test$diagnosis)
 ```
 
 ## k plus proches voisins
-```{r}
+```{r eval=F}
 wdbc_KNN <- knn(train = wdbc2_train, 
                 test = wdbc2_test , 
                 cl = wdbc2_train$diagnosis,
@@ -491,8 +491,10 @@ dt.pred <- predict(wdbc_KNN, newdata = wdbc2_test)
 table(knn.pred, wdbc2_test$diagnosis)
 
 ```
+
 ## Random forest
-```{r}
+
+```{r eval=F}
 
 wdbc_RF <- randomForest(diagnosis ~ ., wdbc2_train, prox=TRUE)
 
