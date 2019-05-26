@@ -52,7 +52,7 @@ Nous utiliserons trois algorithmes de clustering :
 
 - k-means clustering
 - clustering hiérarchique
-- EM 
+- GMM-EM 
 
 La démarche sera la même à chaque fois : on commencera d'abord avec les données "brutes" c'est-à-dire en utilisant *toutes* les variables et ensuite en utilisant seulement quelques variables sélectionnées. Notre but étant de pouvoir consituer des clusters proches des catégories diagnostiques (bénin/malin).
 
@@ -80,10 +80,7 @@ L'algorithme produit deux clusters de tailles `r model_km$size[1]` et `r model_k
 ```{r fun_km_perf}
 km_perf <- function (model) {
   attach(model)
-  df <- data.frame(paste0("Cluster 1 : ", round(withinss[1], 2), "<br>Cluster 2 : ", round(withinss[2], 2)),
-                   round(totss, 2),
-                   round(tot.withinss, 2),
-                   round(betweenss, 2))
+  df <- data.frame(paste0("Cluster 1 : ", round(withinss[1], 2), "<br>Cluster 2 : ", round(withinss[2], 2)), round(totss, 2), round(tot.withinss, 2), round(betweenss, 2))
   return(knitr::kable(df,col.names = c("Somme intra-cluster", "Somme totale", "Somme totale intra-cluster", "Somme inter-cluster"), align = "l"))
   detach(model)
 }
@@ -92,5 +89,7 @@ km_perf <- function (model) {
 Le tableau suivant résume les performances de l'algorithme en utilisant les sommes inter-clusters et intra-clusters *des carrés* des distances entre les données.
 
 `r km_perf(model_km)`
+
+## Clustering hiérarchique
 
 

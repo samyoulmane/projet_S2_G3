@@ -29,6 +29,7 @@ library(dendextend)
 library(rpart)
 library(rpart.plot)
 library(class)
+library(randomForest)
 # Importation des données ####
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
 
@@ -40,9 +41,11 @@ colnames_se <- paste0(colnames, "_se")
 colnames_worst <- paste0(colnames, "_worst")
 colnames(wdbc) <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_worst)
 
-## Diagnosis en numérique (B=0, M=1)
-wdbc2 <- wdbc
+## Diagnosis en numérique (B=0, M=1), sans id
+wdbc2 <- wdbc[-1]
 wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"="0", "M"="1")) %>% as.numeric
+
+
 ```
 
 ***
@@ -213,7 +216,9 @@ wdbc2_se <- wdbc2[, c(2, 13:22)]
 cor(wdbc2_se) %>% 
   corrplot(type="upper",
            method="number",
-           diag=FALSE)
+           diag=FALSE,
+           addCoefasPercent=TRUE,
+           cl.pos=FALSE)
 ```
 
 #### Worst {-}
@@ -223,7 +228,9 @@ wdbc2_worst <- wdbc2[,c(2,23:32)]
 cor(wdbc2_worst) %>%
   corrplot(type="upper",
            method="number",
-           diag=FALSE)
+           diag=FALSE,
+           addCoefasPercent=TRUE,
+           cl.pos=FALSE)
 ```
 
 ## Description des variables
@@ -397,24 +404,48 @@ ggplot(data = wdbc) +
 
 # Clustering 
  
-```{r}
-## Données sans id ni diagnosis
+La deuxième étape de notre analyse consistera à utiliser des algorithmes de clustering pour identifier des groupes au sein des données.    
+Nous utiliserons trois algorithmes de clustering :
+
+- k-means clustering
+- clustering hiérarchique
+- GMM-EM 
+
+La démarche sera la même à chaque fois : on commencera d'abord avec les données "brutes" c'est-à-dire en utilisant *toutes* les variables et ensuite en utilisant seulement quelques variables sélectionnées. Notre but étant de pouvoir consituer des clusters proches des catégories diagnostiques (bénin/malin).
+
+Avant de pouvoir utiliser les algorithmes de clustering, on doit d'abord standardiser les données à l'aide de la fonction `scale`.
+
+```{r scaling}
+# Données sans id ni diagnosis
 wdbc_blind <- wdbc[c(-1, -2)]
-## Application de scale
+# Application de scale
 wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
 ```
 
 ## K-means
 
-```{r k_means, eval=FALSE}
-# (rappel : wdbc2, c'est wdbc avec les diagnostics en numérique)
-nbclusters <- NbClust(wdbc_scaled, method="kmeans")
-wdbc2 <- wdbc2 %>% mutate(cluster_kmeans = nbclusters$Best.partition)
-table(wdbc$cluster_kmeans, wdbc2$diagnosis)
-fviz_cluster(nbclusters$Best.nc, data=wdbc2)
+```{r}
+# Construction du modèle en imposant deux clusters
+model_km <- kmeans(wdbc_scaled, 2)
+
+# Visualisation des clusters
+fviz_cluster(data = wdbc_scaled, model_km)
 ```
 
-L'algorithme a reconnu deux clusters : le cluster 1 de 189 observations, et le cluster 2 qui en comprend 380.
+L'algorithme produit deux clusters de tailles `r model_km$size[1]` et `r model_km$size[2]`.
+
+```{r fun_km_perf}
+km_perf <- function (model) {
+  attach(model)
+  df <- data.frame(paste0("Cluster 1 : ", round(withinss[1], 2), "<br>Cluster 2 : ", round(withinss[2], 2)), round(totss, 2), round(tot.withinss, 2), round(betweenss, 2))
+  return(knitr::kable(df,col.names = c("Somme intra-cluster", "Somme totale", "Somme totale intra-cluster", "Somme inter-cluster"), align = "l"))
+  detach(model)
+}
+```
+
+Le tableau suivant résume les performances de l'algorithme en utilisant les sommes inter-clusters et intra-clusters *des carrés* des distances entre les données.
+
+`r km_perf(model_km)`
 
 ## Hierarchical clustering
 
@@ -432,10 +463,11 @@ table(wdbc_hclust, wdbc2$diagnosis)
 wdbc2_class <- wdbc2[-1]
 set.seed(42)
 ntest <- sample(1:569, 114, replace=FALSE)
+
 wdbc2_test <- wdbc2_class[ntest,]
 wdbc2_train <- wdbc2_class[-ntest,]
-wdbc2_test$diagnosis <- as.factor(wdbc2_test$diagnosis)
-wdbc2_train$diagnosis <- wdbc2_train$diagnosis %>% as.factor
+wdbc2_test$diagnosis <- wdbc2_test$diagnosis %>% as.numeric
+wdbc2_train$diagnosis <- wdbc2_train$diagnosis %>% as.numeric
 ```
 
 ## Arbres de décisions
@@ -450,18 +482,22 @@ table(dt.pred, wdbc2_test$diagnosis)
 
 ## k plus proches voisins
 ```{r}
-knn.pred <- knn(train = wdbc2_train, 
+wdbc_KNN <- knn(train = wdbc2_train, 
                 test = wdbc2_test , 
                 cl = wdbc2_train$diagnosis,
                 k = 5, prob=TRUE)
-table(knn.pred, wdbc2_test$diagnosis)
 
+dt.pred <- predict(wdbc_KNN, newdata = wdbc2_test)
+table(knn.pred, wdbc2_test$diagnosis)
 
 ```
 ## Random forest
 ```{r}
 
+wdbc_RF <- randomForest(diagnosis ~ ., wdbc2_train, prox=TRUE)
 
+dt.pred <- predict(wdbc_RF, newdata=wdbc2_test ,type="class")
+table(dt.pred, wdbc2_test$diagnosis)
 ```
 
 ## Comparaison des modèles
