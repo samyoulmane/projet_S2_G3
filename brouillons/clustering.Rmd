@@ -4,6 +4,7 @@ author: "Guillaume LA & Samy OULMANE"
 date: "2018/2019"
 output:
   html_document:
+    df_print: kable
     toc: true
     number_sections: true
     toc_float:
@@ -41,64 +42,16 @@ colnames(wdbc) <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_wors
 ## Diagnosis en numérique (B=1, M=2)
 wdbc2 <- wdbc
 wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"="1", "M"="2")) %>% as.numeric
-<<<<<<< HEAD
 
 ## Données sans id ni diagnosis
 wdbc_blind <- wdbc[c(-1, -2)]
 ## Application de scale
 wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
-=======
->>>>>>> ad73660a4efa7cd10c60fb1e22ba9add4630f415
-```
 
-***
+var_pert <- c("concave_points_worst", "perimeter_worst", "concave_points_mean", "perimeter_mean", "concavity_mean", "concavity_worst", "compactness_mean", "compactness_worst", "perimeter_se" )
 
-# Clustering
+wdbc_scaled2 <- wdbc_scaled %>% select(var_pert)
 
-La deuxième étape de notre analyse consistera à utiliser des algorithmes de clustering pour identifier des groupes au sein des données.    
-Nous utiliserons trois algorithmes de clustering :
-
-- k-means clustering
-- clustering hiérarchique
-- GMM-EM 
-
-La démarche sera la même à chaque fois : on commencera d'abord avec les données "brutes" c'est-à-dire en utilisant *toutes* les variables et ensuite en utilisant seulement quelques variables sélectionnées. Notre but étant de pouvoir consituer des clusters proches des catégories diagnostiques (bénin/malin).
-<<<<<<< HEAD
-=======
-
-Avant de pouvoir utiliser les algorithmes de clustering, on doit d'abord standardiser les données à l'aide de la fonction `scale`.
-
-```{r scaling}
-# Données sans id ni diagnosis
-wdbc_blind <- wdbc[c(-1, -2)]
-# Application de scale
-wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
-```
->>>>>>> ad73660a4efa7cd10c60fb1e22ba9add4630f415
-
-## K-means
-
-```{r}
-# Construction du modèle en imposant deux clusters
-model_km <- kmeans(wdbc_scaled, 2)
-
-# Visualisation des clusters
-fviz_cluster(data = wdbc_scaled, model_km)
-<<<<<<< HEAD
-
-# Vérification par rapport au diagnostic
-wdbc2 <- wdbc2 %>% mutate(clusters_km = model_km$cluster)
-(verif_table_km <- table(wdbc$diagnosis, wdbc2$clusters_km))
-erreur_km <- (min(verif_table_km[,1])+min(verif_table_km[,2]))/5.69
-```
-
-L'algorithme produit deux clusters de tailles `r model_km$size[1]` et `r model_km$size[2]` avec une erreur de `r round(erreur_km, 2)` % puisque `r min(verif_table_km[,1])+min(verif_table_km[,2])` individus sont mal groupés.
-=======
-```
-
-L'algorithme produit deux clusters de tailles `r model_km$size[1]` et `r model_km$size[2]`.
-
-```{r fun_km_perf}
 km_perf <- function (model) {
   attach(model)
   df <- data.frame(paste0("Cluster 1 : ", round(withinss[1], 2), "<br>Cluster 2 : ", round(withinss[2], 2)), round(totss, 2), round(tot.withinss, 2), round(betweenss, 2))
@@ -107,12 +60,22 @@ km_perf <- function (model) {
 }
 ```
 
-Le tableau suivant résume les performances de l'algorithme en utilisant les sommes inter-clusters et intra-clusters *des carrés* des distances entre les données.
+***
 
-`r km_perf(model_km)`
+# Clustering
 
 ## Clustering hiérarchique
 
->>>>>>> ad73660a4efa7cd10c60fb1e22ba9add4630f415
+Les résultats d'un clestering hiérarchiques sont visualisables avec un **dendrogramme**.
 
-L'algorithme arrive néanmoins à identifier deux groupes qui sont proches des catégories diagnostiques. Dans le cluster où on trouve une majorité de cellules bénignes, on retrouve une minorité de cellules malignes, et vice-versa.
+```{r eval=F}
+
+model_hc <- dist(wdbc_scaled) %>% hclust(method = "ward.D") %>% as.dendrogram()
+model_hc_cluster <- model_hc %>% cutree(2)
+#fviz_dend(model_hc, 2)
+questionr::freq(model_hc_cluster, valid = F)
+table(wdbc$diagnosis, model_hc_cluster)
+WeightedCluster::as.clustrange(model_hc_cluster, dist(wdbc_scaled))
+```
+
+
