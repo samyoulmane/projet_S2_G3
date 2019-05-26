@@ -41,6 +41,14 @@ colnames(wdbc) <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_wors
 ## Diagnosis en numérique (B=1, M=2)
 wdbc2 <- wdbc
 wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"="1", "M"="2")) %>% as.numeric
+<<<<<<< HEAD
+
+## Données sans id ni diagnosis
+wdbc_blind <- wdbc[c(-1, -2)]
+## Application de scale
+wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
+=======
+>>>>>>> ad73660a4efa7cd10c60fb1e22ba9add4630f415
 ```
 
 ***
@@ -55,6 +63,8 @@ Nous utiliserons trois algorithmes de clustering :
 - GMM-EM 
 
 La démarche sera la même à chaque fois : on commencera d'abord avec les données "brutes" c'est-à-dire en utilisant *toutes* les variables et ensuite en utilisant seulement quelques variables sélectionnées. Notre but étant de pouvoir consituer des clusters proches des catégories diagnostiques (bénin/malin).
+<<<<<<< HEAD
+=======
 
 Avant de pouvoir utiliser les algorithmes de clustering, on doit d'abord standardiser les données à l'aide de la fonction `scale`.
 
@@ -64,6 +74,7 @@ wdbc_blind <- wdbc[c(-1, -2)]
 # Application de scale
 wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
 ```
+>>>>>>> ad73660a4efa7cd10c60fb1e22ba9add4630f415
 
 ## K-means
 
@@ -73,6 +84,16 @@ model_km <- kmeans(wdbc_scaled, 2)
 
 # Visualisation des clusters
 fviz_cluster(data = wdbc_scaled, model_km)
+<<<<<<< HEAD
+
+# Vérification par rapport au diagnostic
+wdbc2 <- wdbc2 %>% mutate(clusters_km = model_km$cluster)
+(verif_table_km <- table(wdbc$diagnosis, wdbc2$clusters_km))
+erreur_km <- (min(verif_table_km[,1])+min(verif_table_km[,2]))/5.69
+```
+
+L'algorithme produit deux clusters de tailles `r model_km$size[1]` et `r model_km$size[2]` avec une erreur de `r round(erreur_km, 2)` % puisque `r min(verif_table_km[,1])+min(verif_table_km[,2])` individus sont mal groupés.
+=======
 ```
 
 L'algorithme produit deux clusters de tailles `r model_km$size[1]` et `r model_km$size[2]`.
@@ -92,4 +113,6 @@ Le tableau suivant résume les performances de l'algorithme en utilisant les som
 
 ## Clustering hiérarchique
 
+>>>>>>> ad73660a4efa7cd10c60fb1e22ba9add4630f415
 
+L'algorithme arrive néanmoins à identifier deux groupes qui sont proches des catégories diagnostiques. Dans le cluster où on trouve une majorité de cellules bénignes, on retrouve une minorité de cellules malignes, et vice-versa.
