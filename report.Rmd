@@ -25,19 +25,26 @@ library(RColorBrewer)
 library(plyr)
 library(NbClust)
 library(factoextra)
+
 # Importation des données
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
+wdbc_blind <- wdbc[c(-1, -2)]
 
 # Nom des colonnes
-colnames1 <- c("radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity",  "concave_points", "symmetry",  "fractal_dimension")
-colnames_mean <- paste0(colnames1, "_mean")
-colnames_se <- paste0(colnames1, "_se")
-colnames_worst <- paste0(colnames1, "_worst")
+colnames <- c("radius", "texture", "perimeter", "area", "smoothness", "compactness", "concavity",  "concave_points", "symmetry",  "fractal_dimension")
+variables <- gsub("_", " ", colnames) %>% str_to_title
+colnames_mean <- paste0(colnames, "_mean")
+colnames_se <- paste0(colnames, "_se")
+colnames_worst <- paste0(colnames, "_worst")
 colnames_all <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_worst)
 colnames(wdbc) <- colnames_all
-wdbc$diagnosis <- factor(wdbc$diagnosis)
 
-variables <- c('Radius', 'Texture', 'Perimeter', 'Area', 'Smoothness', 'Compactness', 'Concavity', 'Concave points', 'Symmetry', 'Fractal dimension')
+# Diagnostic en numérique (0=B, 1=M)
+wdbc2 <- wdbc
+wdbc2$diagnosis[wdbc2$diagnosis=="B"] <- 0
+wdbc2$diagnosis[wdbc2$diagnosis=="M"] <- 1
+wdbc2[2] <- wdbc2[2] %>% unlist %>% as.numeric
+
 ```
 
 ***
@@ -138,22 +145,19 @@ draw_g <- function(value = "radius_mean") {
 #### Moyenne
 
 ```{r var_graph_mean, fig.cap='Graphique 1 : répartition des moyennes pour chaque variable'}
-features_mean <- c("radius_mean", "texture_mean", "perimeter_mean", "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean", "concave_points_mean", "symmetry_mean", "fractal_dimension_mean")
-lapply(features_mean, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_mean, draw_g) %>% plot_grid(plotlist = .)
 ```
 
 #### SE
 
 ```{r var_graph_se, fig.cap='Graphique 2 : répartition des erreurs standard pour chaque variable'}
-features_se <- c("radius_se", "texture_se", "perimeter_se", "area_se", "smoothness_se", "compactness_se", "concavity_se", "concave_points_se", "symmetry_se", "fractal_dimension_se")
-lapply(features_se, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_se, draw_g) %>% plot_grid(plotlist = .)
 ```
 
 #### Worst
 
 ```{r var_graph_worst, fig.cap='Graphique 3 : répartition des pires valeurs pour chaque variable'}
-features_worst <- c("radius_worst", "texture_worst", "perimeter_worst", "area_worst", "smoothness_worst", "compactness_worst", "concavity_worst", "concave_points_worst", "symmetry_worst", "fractal_dimension_worst")
-lapply(features_worst, draw_g) %>% plot_grid(plotlist = .)
+lapply(colnames_worst, draw_g) %>% plot_grid(plotlist = .)
 ```
 
 ### Corrélations {.tabset}
@@ -213,7 +217,7 @@ ggplot(data = wdbc) +
 
 Ainsi, on voit que deux tiers des tumeurs sont bénignes.
 
-### Taille du noyau
+### Taille du noyau {.tabset}
 
 Trois variables numériques continues renseignent sur la **taille** du noyau des cellules : le rayon (radius), le périmètre (perimeter) et l'aire (area). Elles sont corrélées entre elles et liées par des relations mathématiques.
 
@@ -275,7 +279,7 @@ graphs.grid("perimeter", "périmètre", T)
 graphs.grid("area", "aire")
 ```
 
-### Aspect
+### Aspect {.tabset}
 
 L'aspect du noyau est raporté par deux variables numériques continues : la compacité et la texture. Comme pour la taille du  noyau, les valeurs pour les tumeurs malignes sont plus élevées que pour les bénignes.
 
@@ -295,7 +299,7 @@ La texture du noyau est calculée à partie de l'ecart-type des valeurs des éch
 graphs.grid("texture", "texture")
 ```
 
-### Forme du noyau
+### Forme du noyau {.tabset}
 
 Cinq variables numériques continues ont été mesurées pour rendre compte de la forme du noyau. On voit que la différence entre les cellules malignes et bénignes est la plus marquée pour les variables `concavity` et `concave points`. Les cellules tumorales malignes ont donc un noyau avec des contours plus concaves par rapport aux cellules bénines. La dimension fractale par contre n'est pas différente entre les deux types de cellules.
 
@@ -331,28 +335,31 @@ La dimension fractale est une variable numérique continue. Elle renseigne sur l
 graphs.grid("fractal_dimension", "dimension fractale")
 ```
 
-# Clustering
+# Clustering 
+ 
+## K-means :
 
-## K-means
+```{r k_means, eval=FALSE}
+# (rappel : wdbc2, c'est wdbc avec les diagnostics en numérique)
+nbclusters <- NbClust(wdbc_scaled, method="kmeans")
+wdbc2 <- wdbc2 %>% mutate(cluster_kmeans = nbclusters$Best.partition)
+table(wdbc$cluster_kmeans, wdbc2$diagnosis)
+fviz_cluster(nbclusters$Best.nc, data=wdbc2)
+```
 
-```{r include=FALSE, eval=FALSE}
-set.seed(1)
-ntest <- sample(1:569, 114, replace=FALSE)
-wdbc3 <- wdbc2[, c(-1, -2)]
-test_set <- wdbc3[ntest,]
-train_set <- wdbc3[-ntest,]
-nbclusters <- NbClust(wdbc3, method="kmeans")
-# kmeans_cluster <- kmeans(wdbc2, 2, nstart=200, iter.max=100)
-wdbc4 <- wdbc3 %>% mutate(cluster = nbclusters$Best.partition)
-table(wdbc3$cluster, wdbc2$diagnosis)
-table(wdbc2$diagnosis)
-fviz_cluster(object = kmeans_cluster, data=wdbc2)
+L'algorithme a reconnu deux clusters : le cluster 1 de 189 observations, et le cluster 2 qui en comprend 380.
+
+## Hierarchical clustering :
+
+```{r h_clust}
+wdbc_scaled <- wdbc_blind %>% apply(2, FUN=scale) %>% as.data.frame
+
+wdbc_hclust <- hclust(dist(wdbc_scaled), method="average") %>% cutree(2)
+
+table(wdbc_hclust, wdbc2$diagnosis)
 
 ```
 
-## Clustering hiérarchique
-
-## Autre
 
 # Classification
 
@@ -363,4 +370,3 @@ fviz_cluster(object = kmeans_cluster, data=wdbc2)
 ## Random forest
 
 ## Comparaison des modèles
-
