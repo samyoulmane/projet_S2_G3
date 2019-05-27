@@ -30,6 +30,7 @@ library(rpart)
 library(rpart.plot)
 library(class)
 library(randomForest)
+library(mclust)
 # Importation des données ####
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
 
@@ -42,8 +43,8 @@ colnames_worst <- paste0(colnames, "_worst")
 colnames(wdbc) <- c("id", "diagnosis", colnames_mean, colnames_se, colnames_worst)
 
 ## Diagnosis en numérique (B=0, M=1), sans id
-wdbc2 <- wdbc[-1]
-wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"="0", "M"="1")) %>% as.numeric
+wdbc2 <-wdbc[-1]
+wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"=0, "M"=1))
 
 
 ```
@@ -416,18 +417,25 @@ La démarche sera la même à chaque fois : on commencera d'abord avec les donn�
 Avant de pouvoir utiliser les algorithmes de clustering, on doit d'abord standardiser les données à l'aide de la fonction `scale`.
 
 ```{r scaling}
-# Application de scale
+# Application de scale, en enlevant diagnosis
 wdbc_scaled <- wdbc2[-1] %>% apply(2, FUN=scale) %>% as.data.frame
+
+# On aura parfois besoin de réduire les données à cause du manque de puissance de calcul
+wdbc_mini<- wdbc_scaled[, c(-1, -4, -11, -14, -21, -24)]
 ```
 
 ## K-means
 
-```{r}
+```{r k_means}
 # Construction du modèle en imposant deux clusters
-model_km <- kmeans(wdbc_scaled, 2)
+wdbc_km <- kmeans(wdbc_scaled, 2)
 
 # Visualisation des clusters
 fviz_cluster(data = wdbc_scaled, model_km)
+
+# Table
+table(wdbc_km$cluster)
+table(wdbc_km$cluster, wdbc2$diagnosis)
 ```
 
 L'algorithme produit deux clusters de tailles `r model_km$size[1]` et `r model_km$size[2]`.
@@ -450,10 +458,20 @@ Le tableau suivant résume les performances de l'algorithme en utilisant les som
 ```{r h_clust}
 
 wdbc_hclust <- dist(wdbc_scaled) %>% hclust("ward.D") %>% cutree(2)
-
+questionr::freq(wdbc_hclust, val=FALSE)
 table(wdbc_hclust, wdbc2$diagnosis)
+as.list(wdbc_hclust)
+```
+
+```{r em}
+
+wdbc_em <- Mclust(wdbc_scaled, G=2)
+
+
+table(wdbc_em$classification, wdbc2$diagnosis)
 
 ```
+
 
 # Classification
 
