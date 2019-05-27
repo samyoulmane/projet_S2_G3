@@ -29,14 +29,3 @@ wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"="0", "M"="1")) %>% as.numeric
 
 ################################# CODE ##################################
 
-
-# Construction du modèle en imposant deux clusters
-model_km <- kmeans(wdbc_scaled, 2)
-model_km
-
-# Visualisation des clusters
-fviz_cluster(data = wdbc_scaled, model_km)
-
-# Vérification par rapport au diagnostic
-wdbc2 <- wdbc2 %>% mutate(clusters_km = model_km$cluster)
-table(wdbc2$clusters_km, wdbc2$diagnosis)

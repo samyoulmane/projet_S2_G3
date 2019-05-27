@@ -474,7 +474,7 @@ Le troisième algorithme de clustering que nous avons choisi est l'algorithme d'
 
 ```{r model_gmm_em}
 # Construction du modèle avec le jeu de données réduit (meilleure )
-model_em <- Mclust(wdbc_, G=2)
+model_em <- Mclust(wdbc_scaled, G=2)
 
 # Visualisationd es clusters
 fviz_mclust(model_em)
@@ -507,68 +507,100 @@ On remarque qu'à chaque fois, c'est le plus grand des clusters qui obtient les 
 
 # Classification
 
-En dernière partie de notre analyse, on utilisera des algorithmes de classification pour 
-
-Pour appliquer des algorithmes de classification, on doit d'abord diviser le jeu de données en deux parties :
+En dernière partie de notre analyse, on utilisera des algorithmes de classification pour prédire la classe diagnostique. Mais pour appliquer ces algorithmes, on doit d'abord diviser le jeu de données en deux parties :
 
 - une partie entrainement (train) sur laquelle se fera l'apprentissage
-- et une partie test sur laquelle on appliquera l'algorithme de classification pour prédique la classe diagnostique.
+- et une partie vérification (test) sur laquelle on appliquera l'algorithme de classification pour prédique la classe diagnostique.
+
+Les trois algorithmes utilisé sont :
+
+- l'arbre de décision 
+- la régression logistique
+- random forest
 
 ```{r split_data, include=FALSE}
-
 set.seed(42)
 
+# TEST SET
+# On garde 20% des données pour le test
 ntest <- sample(1:nrow(wdbc2), 0.2*nrow(wdbc2), replace=FALSE)
+# On s'assure du maintient des proportions de chaque catégorie diagnostique entre les sous-échantillon
 wdbc2_test1 <- wdbc2[wdbc2$diagnosis=="1",] %>% sample_n(round(0.2*sum(wdbc2$diagnosis == 1)))
 wdbc2_test0 <- wdbc2[wdbc2$diagnosis=="0",] %>% sample_n(round(0.2*sum(wdbc2$diagnosis == 0)))
 wdbc2_test <- bind_rows(wdbc2_test1, wdbc2_test0)
-wdbc2_train <- anti_join(wdbc2, wdbc2_test)
-
 wdbc2_test$diagnosis <- wdbc2_test$diagnosis %>% as.factor
+
+# TRAIN SET
+wdbc2_train <- anti_join(wdbc2, wdbc2_test)
 wdbc2_train$diagnosis <- wdbc2_train$diagnosis %>% as.factor
 ```
 
-## Arbres de décisions
+## Arbre de décisions
+
+Le premier algorithme de classification est **l'arbre de décision**. Cet algorithme a l'avantage d'être intuitif et d'expliciter les variables utilisées pour classifier les données.
 
 ```{r decision_tree}
 model_dt <- rpart(diagnosis ~ ., data=wdbc2_train)
 
-# Visualisation de l'arbre
+# Visualisation
 rpart.plot(model_dt)
 
-# Calcul des performances avec caret, qui permet de générer une matrice de confusion
-perf_knn <- predict(model_dt, newdata=wdbc2_test ,type="class") %>% 
+# Calcul des performances avec caret, qui permet de générer une matrice de confusion        
+perf_dt <- predict(model_dt, newdata=wdbc2_test ,type="class") %>% 
   table(wdbc2_test$diagnosis) %>%
-  confusionMatrix(table_DT)
+  confusionMatrix
 ```
 
-## k plus proches voisins
+On retrouve ici les variables `perimeter_worst` ou `radius_worst` et `concave_points_worst` comme critères de décision, ce qui est cohérent avec ce qu'on avait trouvé [plus haut](#13_variables_pertinentes) lors de la recherche des variables pertinentes. En effet, ces deux variables sont celles qui sont les plus corrélées au diagnostic.
 
-```{r knn}
-# Construction du modèle
-model_knn <- knn(train = wdbc2_train, 
-                test = wdbc2_test , 
-                cl = wdbc2_train$diagnosis,
-                k = 5, prob=TRUE)
+Néanmoins cette relation n'a pas été observée avec `texture_worst`, dont le coefficient de corrélation avec `diagnosis` n'est que le 46 %.
 
-# Calcul des performances avec caret
-perf_knn <- table(wdbc2_test$diagnosis, model_knn) %>%
-  confusionMatrix()
+## Régression logistique
+
+Etant donné que nous devons prédire une variable binaire dans le cadre d'une analyse multivariée, nous avons choisi d'utiliser un algorithme de régression logistique.
+
+```{r log_reg, message=FALSE, warning=FALSE}
+# Génération du modèle
+model_lr <- glm(diagnosis ~., wdbc2_train, family=binomial)
+
+# Calcul des performances avec caret, qui permet de générer une matrice de confusion
+perf_lr <- model_lr %>%
+              predict(wdbc2_test, type="response") %>% 
+              round() %>% 
+              table(wdbc2_test$diagnosis) %>%
+              confusionMatrix
 ```
 
 ## Random forest
 
-```{r eval=F}
+L'algorithme de random forest est la méthode ensembliste que nous avons choisi.
 
-wdbc_RF <- randomForest(diagnosis ~ ., wdbc2_train, prox=TRUE) %>% 
-              predict(wdbc_RF, newdata=wdbc2_test ,type="class") %>%
-              table(wdbc2_test$diagnosis)
+```{r random_forest}
+# Génération du modèle
+model_rf <- randomForest(diagnosis ~ ., wdbc2_train, prox=TRUE)
+
+# Calcul des performances avec caret, qui permet de générer une matrice de confusion
+perf_rf <- model_rf %>%
+              predict(newdata=wdbc2_test, type="response") %>%
+              table(wdbc2_test$diagnosis) %>%
+              confusionMatrix
 ```
 
 ## Comparaison des modèles
-```{r}
 
+Pour comparer les performances des différents algorithmes, on avons utilisé le package `caret` pour produire des matrices de confusion et différents indicateurs de qualité des modèles qui sont la **sensibilité**, la **specificité** et les **valeurs prédictives positives** et **négative**.
 
+```{r models_comparing, warning=FALSE}
+comparing <- data.frame(round(perf_dt$byClass[1:4]*100, 2), 
+                        round(perf_lr$byClass[1:4]*100, 2), 
+                        round(perf_rf$byClass[1:4]*100, 2)) %>% t
 
+rownames(comparing) <- c("KNN", "Régression logistique", "Random forest")
+colnames(comparing) <- c("Sensibilité", "Specificité", "VPP", "VPN")
+
+DT::datatable(comparing, options = list(dom = 't'))
 ```
+
+Après plusieurs essais, random forest est l'algorithme qui obtient les meilleures performances, alors que la régression logistique obtient les pires.
+
 
