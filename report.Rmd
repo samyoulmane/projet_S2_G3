@@ -32,6 +32,7 @@ library(rpart.plot)
 library(class)
 library(randomForest)
 library(mclust)
+library(caret)
 # Importation des données ####
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
 
@@ -475,7 +476,7 @@ table(wdbc_em$classification, wdbc2$diagnosis)
 
 # Classification
 
-```{r split_data}
+```{r split_data, include=FALSE}
 
 set.seed(42)
 
@@ -489,40 +490,53 @@ wdbc2_test$diagnosis <- wdbc2_test$diagnosis %>% as.factor
 wdbc2_train$diagnosis <- wdbc2_train$diagnosis %>% as.factor
 ```
 
-## Arbres de décisions
+## Arbre de décisions
+
 ```{r decision_tree}
-wdbc_DT <- rpart(diagnosis ~ ., data=wdbc2_train)
-rpart.plot(wdbc_DT)
+model_dt <- rpart(diagnosis ~ ., data=wdbc2_train)
+
+rpart.plot(model_dt)
           
-table_DT <- predict(wdbc_DT, newdata=wdbc2_test ,type="class") %>% 
-  table(wdbc2_test$diagnosis)
+perf_dt <- predict(model_dt, newdata=wdbc2_test ,type="class") %>% 
+  table(wdbc2_test$diagnosis) %>%
+  confusionMatrix
 
 ```
 
-## k plus proches voisins
-```{r eval=F}
-wdbc_KNN <- knn(train = wdbc2_train, 
-                test = wdbc2_test , 
-                cl = wdbc2_train$diagnosis,
-                k = 5, prob=TRUE)
+## Régression logistique
 
-table_KNN <- table(wdbc_KNN, wdbc2_test$diagnosis)
+```{r}
+
+model_lr <- glm(diagnosis ~., wdbc2_train, family=binomial)
+
+perf_lr <- model_lr %>%
+              predict(wdbc2_test, type="response") %>% 
+              round() %>% 
+              table(wdbc2_test$diagnosis) %>% 
+              confusionMatrix
 
 ```
 
 ## Random forest
 
-```{r eval=F}
+```{r random_forest}
 
-wdbc_RF <- randomForest(diagnosis ~ ., wdbc2_train, prox=TRUE) %>% 
-              predict(wdbc_RF, newdata=wdbc2_test ,type="class") %>%
-              table(wdbc2_test$diagnosis)
+model_rf <- randomForest(diagnosis ~ ., wdbc2_train, prox=TRUE)
+
+perf_rf <- model_rf %>%
+              predict(newdata=wdbc2_test, type="response") %>%
+              table(wdbc2_test$diagnosis) %>%
+              confusionMatrix
+
 ```
 
 ## Comparaison des modèles
 ```{r}
 
+comparing <- data_frame(perf_dt$byClass[1:4], perf_lr$byClass[1:4], perf_rf$byClass[1:4]) %>% t
+rownames(comparing) <- c("knn", "Régression logistique", "random forest")
+colnames(comparing) <- c("Sensibilité", "Specificité", "VPP", "VPN")
 
+DT::datatable(comparing)
 
 ```
-
