@@ -533,10 +533,12 @@ perf_rf <- model_rf %>%
 ## Comparaison des modèles
 ```{r}
 
-comparing <- data_frame(perf_dt$byClass[1:4], perf_lr$byClass[1:4], perf_rf$byClass[1:4]) %>% t
-rownames(comparing) <- c("knn", "Régression logistique", "random forest")
+comparing <- data_frame(round(perf_dt$byClass[1:4]*100, 2), 
+                        round(perf_lr$byClass[1:4]*100, 2), 
+                        round(perf_rf$byClass[1:4]*100, 2)) %>% t
+rownames(comparing) <- c("KNN", "Régression logistique", "Random forest")
 colnames(comparing) <- c("Sensibilité", "Specificité", "VPP", "VPN")
 
-DT::datatable(comparing)
+DT::datatable(comparing, options = list(dom = 't'))
 
 ```
