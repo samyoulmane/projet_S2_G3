@@ -427,17 +427,13 @@ wdbc_mini<- wdbc_scaled[, c(-1, -4, -11, -14, -21, -24)]
 
 ```{r model_kmeans}
 # Construction du modèle en imposant deux clusters
-wdbc_km <- kmeans(wdbc_scaled, 2)
+model_km <- kmeans(wdbc_scaled, 2)
 
 # Visualisation des clusters
 fviz_cluster(data = wdbc_scaled, model_km)
 
-# Table
-table(wdbc_km$cluster)
-table(wdbc_km$cluster, wdbc2$diagnosis)
-
 # Taille des clusters
-questionr::freq(model_km, valid = F)
+questionr::freq(model_km$cluster, valid = F)
 
 km_perf <- function (model) {
   attach(model)
@@ -451,17 +447,22 @@ Le tableau suivant résume les performances de l'algorithme en utilisant les som
 
 `r km_perf(model_km)`
 
-## Hierarchical clustering
+## Clustering hiérarchique
 
-```{r model_hclust}
+Les résultats d'un clustering hiérarchique sont visualisables avec un **dendrogramme**.
 
-wdbc_hclust <- dist(wdbc_scaled) %>% hclust("ward.D") %>% cutree(2)
-questionr::freq(wdbc_hclust, val=FALSE)
-table(wdbc_hclust, wdbc2$diagnosis)
-as.list(wdbc_hclust)
+```{r}
+# Construction du modèle
+model_hc <- dist(wdbc_scaled) %>% hclust(method = "ward.D") %>% as.dendrogram()
+# On coupe le denrogramme de sorte à n'avoir que deux clusters
+model_hc_cluster <- model_hc %>% cutree(2)
+# Visualisation
+fviz_dend(model_hc, 2)
+# Taille des clusters
+questionr::freq(model_hc_cluster, valid = F)
 ```
 
-```{r em}
+```{r em, eval=F}
 
 wdbc_em <- Mclust(wdbc_scaled, G=2)
 

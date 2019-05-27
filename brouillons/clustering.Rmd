@@ -66,14 +66,14 @@ km_perf <- function (model) {
 
 ## Clustering hiérarchique
 
-Les résultats d'un clestering hiérarchiques sont visualisables avec un **dendrogramme**.
+Les résultats d'un clustering hiérarchique sont visualisables avec un **dendrogramme**.
 
-```{r eval=F}
+```{r}
 # Construction du modèle
 model_hc <- dist(wdbc_scaled) %>% hclust(method = "ward.D") %>% as.dendrogram()
 # On coupe le denrogramme de sorte à n'avoir que deux clusters
 model_hc_cluster <- model_hc %>% cutree(2)
-# VIsualisation
+# Visualisation
 fviz_dend(model_hc, 2)
 # Taille des clusters
 questionr::freq(model_hc_cluster, valid = F)
