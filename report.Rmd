@@ -422,17 +422,16 @@ wdbc_scaled <- wdbc2[-1] %>% apply(2, FUN=scale) %>% as.data.frame
 
 ## K-means
 
-```{r}
+```{r model_kmeans}
 # Construction du modèle en imposant deux clusters
 model_km <- kmeans(wdbc_scaled, 2)
 
 # Visualisation des clusters
 fviz_cluster(data = wdbc_scaled, model_km)
-```
 
-L'algorithme produit deux clusters de tailles `r model_km$size[1]` et `r model_km$size[2]`.
+# Taille des clusters
+questionr::freq(model_km, valid = F)
 
-```{r fun_km_perf}
 km_perf <- function (model) {
   attach(model)
   df <- data.frame(paste0("Cluster 1 : ", round(withinss[1], 2), "<br>Cluster 2 : ", round(withinss[2], 2)), round(totss, 2), round(tot.withinss, 2), round(betweenss, 2))
@@ -447,7 +446,7 @@ Le tableau suivant résume les performances de l'algorithme en utilisant les som
 
 ## Hierarchical clustering
 
-```{r h_clust}
+```{r model_hclust}
 
 wdbc_hclust <- dist(wdbc_scaled) %>% hclust("ward.D") %>% cutree(2)
 
