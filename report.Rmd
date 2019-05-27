@@ -32,6 +32,7 @@ library(rpart.plot)
 library(class)
 library(randomForest)
 library(mclust)
+library(caret)
 # Importation des données ####
 wdbc <- read_csv("data/wdbc.data", col_names = FALSE)
 
@@ -55,7 +56,7 @@ wdbc2$diagnosis <- revalue(wdbc$diagnosis, c("B"=0, "M"=1)) %>% as.numeric
 
 ## Description de la population
 
-Le jeu de données est constitué de `r nrow(wdbc)` entrées. Chacune de ces entrées correspond à une personne atteinte d'un cancer du sein chez qui une biopsie de la tumeur a été effectuée. Les noyaux des cellules tumorales on ensuite été énalysé et les données recueillies sont présentées dans le tableau ci-dessous. Pour chaque variable, on a **la moyenne** (mean), **l'erreur standard** (SE) et **la "pire"" valeur** (worst, c'est-à-dire la moyenne des trois plus grandes valeurs de la variable).
+Le jeu de données est constitué de `r nrow(wdbc)` entrées. Chacune de ces entrées correspond à une personne atteinte d'un cancer du sein chez qui une biopsie de la tumeur a été effectuée. Les noyaux des cellules tumorales on ensuite été analysé et les données recueillies sont présentées dans le tableau ci-dessous. Pour chaque variable, on a **la moyenne** (mean), **l'erreur standard** (SE) et **la "pire"" valeur** (worst, c'est-à-dire la moyenne des trois plus grandes valeurs de la variable).
 
 ```{r table_desc_1}
 
@@ -102,7 +103,7 @@ DT::datatable(df, container = sketch, rownames = FALSE, options = list(scrollY =
 Les 10 variables mesurées sur les noyaux des cellules sont :
 
 1. **Radius** : le rayon du noyau, qui est la moyenne des distances entre le centre du noyau et des points sur le périmètre
-2. **Texture** : ecart-ype des valeurs des echelles de gris
+2. **Texture** : écart-type des valeurs des échelles de gris
 3. **Perimeter** : le périmètre du noyau
 6. **Area** : l'aire du noyau
 7. **Smoothness** : la variation locale des longueurs du rayon
@@ -112,7 +113,7 @@ Les 10 variables mesurées sur les noyaux des cellules sont :
 11. **Symmetry** : la symétrie du noyau
 12. **Fractal dimension** : "coastline approximation" - 1
 
-Chaque échantillon a un identifiant et un diagnostic associé à la tumeur (maligne, M ; ou bénin, B). Il y a `r (wdbc$diagnosis %>% table)["B"]` tumeurs bénines (`r round((wdbc$diagnosis %>% table)["B"]*100/nrow(wdbc),2)` %) et `r (wdbc$diagnosis %>% table)["M"]` (`r round((wdbc$diagnosis %>% table)["M"]*100/nrow(wdbc),2)` %) tumeurs malignes.
+Chaque échantillon a un identifiant et un diagnostic associé à la tumeur (maligne, M ; ou bénin, B). Il y a `r (wdbc$diagnosis %>% table)["B"]` tumeurs bénignes (`r round((wdbc$diagnosis %>% table)["B"]*100/nrow(wdbc),2)` %) et `r (wdbc$diagnosis %>% table)["M"]` (`r round((wdbc$diagnosis %>% table)["M"]*100/nrow(wdbc),2)` %) tumeurs malignes.
 
 Le tableau suivant résume quelques paramètres statistiques pour chaque variables :
 
@@ -130,7 +131,7 @@ desctable(wdbc[,-1], stats = list("N"       = length,
 
 ### Densités de répartition
 
-La densité de répartition des valeurs de chaque variables est raportée dans les graphiques suivants.
+La densité de répartition des valeurs de chaque variables est rapportée dans les graphiques suivants.
 
 ```{r fct_draw_g, include=FALSE}
 draw_g <- function(value = "radius_mean", var_fill = NA, facet_diag = T) {
@@ -238,7 +239,7 @@ cor(wdbc2_worst) %>%
 
 ### Diagnostic
 
-C'est une variable catégorielle binaire qui renseigne sur le diagnostic associé à l'échantillon. Elle prend soit la valeur "B" pour désigner une tumeur bénine, soit la valeur "M" pour une tumeur maligne.
+C'est une variable catégorielle binaire qui renseigne sur le diagnostic associé à l'échantillon. Elle prend soit la valeur "B" pour désigner une tumeur bénigne, soit la valeur "M" pour une tumeur maligne.
 
 ```{r graph_diagnosis}
 ggplot(data = wdbc) +
@@ -317,7 +318,7 @@ graphs.grid("area", "aire")
 
 ### Aspect {.tabset}
 
-L'aspect du noyau est raporté par deux variables numériques continues : la compacité et la texture. Comme pour la taille du  noyau, les valeurs pour les tumeurs malignes sont plus élevées que pour les bénignes.
+L'aspect du noyau est rapporté par deux variables numériques continues : la compacité et la texture. Comme pour la taille du  noyau, les valeurs pour les tumeurs malignes sont plus élevées que pour les bénignes.
 
 #### Compactness {-}
 
@@ -329,7 +330,7 @@ graphs.grid("compactness", "compacité")
 
 #### Texture {-}
 
-La texture du noyau est calculée à partie de l'ecart-type des valeurs des échelles de gris.
+La texture du noyau est calculée à partie de l’écart-type des valeurs des échelles de gris.
 
 ```{r texture_graphs, warning=FALSE, message=FALSE}
 graphs.grid("texture", "texture")
@@ -337,7 +338,7 @@ graphs.grid("texture", "texture")
 
 ### Forme du noyau {.tabset}
 
-Cinq variables numériques continues ont été mesurées pour rendre compte de la forme du noyau. On voit que la différence entre les cellules malignes et bénignes est la plus marquée pour les variables `concavity` et `concave points`. Les cellules tumorales malignes ont donc un noyau avec des contours plus concaves par rapport aux cellules bénines. La dimension fractale par contre n'est pas différente entre les deux types de cellules.
+Cinq variables numériques continues ont été mesurées pour rendre compte de la forme du noyau. On voit que la différence entre les cellules malignes et bénignes est la plus marquée pour les variables `concavity` et `concave points`. Les cellules tumorales malignes ont donc un noyau avec des contours plus concaves par rapport aux cellules bénignes. La dimension fractale par contre n'est pas différente entre les deux types de cellules.
 
 #### Smoothness {-}
 
@@ -373,7 +374,7 @@ graphs.grid("fractal_dimension", "dimension fractale")
 
 ## Variables pertinentes
 
-La figure ci dessous montre les coefficients de corrélation enntre le diagnostic et les autres variables.
+La figure ci dessous montre les coefficients de corrélation entre le diagnostic et les autres variables.
 
 ```{r cor_diag}
 cor_diag <- cor(wdbc2[,1], wdbc2[,c(1:31)])
@@ -412,19 +413,18 @@ Nous utiliserons trois algorithmes de clustering :
 - clustering hiérarchique
 - GMM-EM 
 
-La démarche sera la même à chaque fois : on commencera d'abord avec les données "brutes" c'est-à-dire en utilisant *toutes* les variables et ensuite en utilisant seulement quelques variables sélectionnées. Notre but étant de pouvoir consituer des clusters proches des catégories diagnostiques (bénin/malin).
+Nous avons vu lors de [l'étape de description du jeu de données](#111_densités_de_répartition) qu'une répartition bimodale pouvait apparaître avec certaines variables, suggérant l’existence de deux groupes. Nous verrons donc lors de cette étape de clustering si les algorithmes utilisés arriveront à constituer deux groupes distincts et homogènes.
 
 Avant de pouvoir utiliser les algorithmes de clustering, on doit d'abord standardiser les données à l'aide de la fonction `scale`.
 
 ```{r scaling}
 # Application de scale, en enlevant diagnosis
 wdbc_scaled <- wdbc2[-1] %>% apply(2, FUN=scale) %>% as.data.frame
-
-# On aura parfois besoin de réduire les données à cause du manque de puissance de calcul
-wdbc_mini<- wdbc_scaled[, c(-1, -4, -11, -14, -21, -24)]
 ```
 
 ## K-means
+
+Le premier algorithme utilise la méthode des **k-moyennes**.
 
 ```{r model_kmeans}
 # Construction du modèle en imposant deux clusters
@@ -452,30 +452,69 @@ Le tableau suivant résume les performances de l'algorithme en utilisant les som
 
 Les résultats d'un clustering hiérarchique sont visualisables avec un **dendrogramme**.
 
-```{r}
+```{r model_hclustering}
 # Construction du modèle
 model_hc <- dist(wdbc_scaled) %>% hclust(method = "ward.D") %>% as.dendrogram()
+
 # On coupe le denrogramme de sorte à n'avoir que deux clusters
 model_hc_cluster <- model_hc %>% cutree(2)
+
 # Visualisation
 fviz_dend(model_hc, 2)
+
 # Taille des clusters
 questionr::freq(model_hc_cluster, valid = F)
 ```
 
-```{r em, eval=F}
+## Mélange gaussien avec espérance-maximisation
 
-wdbc_em <- Mclust(wdbc_scaled, G=2)
+Le troisième algorithme de clustering que nous avons choisi est l'algorithme d'espérance-maximisation sur un modèle de mélange gaussien. C'est un algorithme de soft-clustering donc chaque individu a une **probabilité** d’appartenir à l'un ou l'autre des clusters, ce qui est particulièrement approprié dans le contexte d'une décision médicale lorsqu'il s'agit de poser un diagnostic.
 
+=> Les deux autres algorithmes utilisés précédemment sont des algorithmes de hard-clustering c'est-à-dire que chaque individu est assigné à un cluster de façon binaire. On ne sait pas avec quelle certitude l'assignation est faite.
 
-table(wdbc_em$classification, wdbc2$diagnosis)
+```{r model_gmm_em}
+# Construction du modèle avec le jeu de données réduit (meilleure )
+model_em <- Mclust(wdbc_, G=2)
 
+# Visualisationd es clusters
+fviz_mclust(model_em)
+
+# Taille des clusters
+questionr::freq(model_em$classification, valid = F)
+
+table(wdbc$diagnosis, model_em$classification)
 ```
 
+## Evaluation des modèles
+
+En résumé, les trois algorithmes de clustering identifient bien les deux clusters.
+
+Pour évaluer la cohérence des clusters, nous avons utilisé le coefficient de **silhouette** et sa représentation graphique. La ligne rouge en pointillé représente le score moyen.
+
+```{r}
+# Calcul des coefficients de silhouette pour chaque modèle
+sil_km <- cluster::silhouette(model_km$cluster, dist(wdbc_scaled))
+sil_hc <- cluster::silhouette(model_hc_cluster, dist(wdbc_scaled))
+sil_em <- cluster::silhouette(model_em$classification, dist(wdbc_scaled))
+
+# Visualisation graphique
+plot_grid(fviz_silhouette(sil_km, subtitle = "KM"),
+          fviz_silhouette(sil_hc, subtitle = "HC"),
+          fviz_silhouette(sil_em, subtitle = "EM"))
+```
+
+On remarque qu'à chaque fois, c'est le plus grand des clusters qui obtient les scores silhouette les plus élevés et qu'ils sont quasiment tous positifs. En revanche, le cluster le plus petit est moins cohérent, avec des scores qui sont presque tous en dessous de la moyenne pour les trois algorithmes.
 
 # Classification
 
-```{r split_data}
+En dernière partie de notre analyse, on utilisera des algorithmes de classification pour 
+
+Pour appliquer des algorithmes de classification, on doit d'abord diviser le jeu de données en deux parties :
+
+- une partie entrainement (train) sur laquelle se fera l'apprentissage
+- et une partie test sur laquelle on appliquera l'algorithme de classification pour prédique la classe diagnostique.
+
+```{r split_data, include=FALSE}
 
 set.seed(42)
 
@@ -490,24 +529,31 @@ wdbc2_train$diagnosis <- wdbc2_train$diagnosis %>% as.factor
 ```
 
 ## Arbres de décisions
-```{r decision_tree}
-wdbc_DT <- rpart(diagnosis ~ ., data=wdbc2_train)
-rpart.plot(wdbc_DT)
-          
-table_DT <- predict(wdbc_DT, newdata=wdbc2_test ,type="class") %>% 
-  table(wdbc2_test$diagnosis)
 
+```{r decision_tree}
+model_dt <- rpart(diagnosis ~ ., data=wdbc2_train)
+
+# Visualisation de l'arbre
+rpart.plot(model_dt)
+
+# Calcul des performances avec caret, qui permet de générer une matrice de confusion
+perf_knn <- predict(model_dt, newdata=wdbc2_test ,type="class") %>% 
+  table(wdbc2_test$diagnosis) %>%
+  confusionMatrix(table_DT)
 ```
 
 ## k plus proches voisins
-```{r eval=F}
-wdbc_KNN <- knn(train = wdbc2_train, 
+
+```{r knn}
+# Construction du modèle
+model_knn <- knn(train = wdbc2_train, 
                 test = wdbc2_test , 
                 cl = wdbc2_train$diagnosis,
                 k = 5, prob=TRUE)
 
-table_KNN <- table(wdbc_KNN, wdbc2_test$diagnosis)
-
+# Calcul des performances avec caret
+perf_knn <- table(wdbc2_test$diagnosis, model_knn) %>%
+  confusionMatrix()
 ```
 
 ## Random forest
